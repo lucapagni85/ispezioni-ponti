@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ispezioni ponti L1</title>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0b5a8a"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#e9eef2;--ink:#14202b;--mut:#5b6b78;--ac:#0b5a8a;--ln:#b9c5cf;--ok:#1d7a46;--card:#fff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.4 system-ui,Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--ac);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 14px}
+header h1{font-size:19px;margin:0;flex:1}
+header small{opacity:.85}
+main{max-width:900px;margin:0 auto;padding:12px}
+button{font:inherit;min-height:48px;padding:0 16px;border:1.5px solid var(--ac);background:#fff;color:var(--ac);border-radius:8px}
+button.p{background:var(--ac);color:#fff}
+header button{background:transparent;color:#fff;border-color:#fff}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.pt{background:var(--card);border:1px solid var(--ln);border-radius:8px;padding:12px 14px;margin:8px 0;display:flex;align-items:center;gap:12px}
+.pt b{flex:1}.pt span{color:var(--mut);font-size:15px}
+details{background:var(--card);border:1px solid var(--ln);border-radius:8px;margin:10px 0}
+summary{padding:14px;font-weight:700;cursor:pointer;min-height:48px}
+.in{padding:4px 14px 14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.w{grid-column:1/-1}
+label{display:block;font-size:15px;color:var(--mut)}
+input,textarea{display:block;width:100%;min-height:48px;margin-top:4px;font:inherit;color:var(--ink);padding:8px 10px;border:1.5px solid var(--ln);border-radius:8px;background:#fff}
+input:focus,textarea:focus,button:focus-visible{outline:3px solid #f0a500;outline-offset:1px}
+.ch{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.c{border-color:var(--ln);color:var(--ink)}
+.c.on{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:700}
+.g{border:1px solid var(--ln);border-radius:8px;padding:10px;display:grid;grid-template-columns:repeat(3,1fr) auto;gap:8px;align-items:end}
+.g>b{grid-column:1/-1}
+.tb{overflow-x:auto}
+table{border-collapse:collapse;min-width:100%}
+th,td{border:1px solid var(--ln);padding:3px;font-size:14px;text-align:left;min-width:92px}
+td input{margin:0;min-height:44px}
+th:first-child{min-width:150px}
+img.f{max-width:100%;max-height:260px;display:block;margin:8px 0;border:1px solid var(--ln)}
+#st{font-size:14px}
+@media(max-width:600px){.g{grid-template-columns:1fr}}
+</style></head><body>
+<header id="h"></header><main id="m"></main>
+<script>
+const S=[
+{t:'Intestazione',f:[['x','strada','Strada di appartenenza'],['x','km','Progressiva km'],['x','tecnico','Tecnico rilevatore'],['d','data','Data ispezione']]},
+{t:'Localizzazione',f:[['x','prov','Provincia/Regione'],['x','comune','Comune'],['x','loc','Località'],['r','crs','Coordinate geografiche',['ETRF2000','WGS84']],['g','centro','Centro'],['g','iniziale','Iniziale'],['g','finale','Finale']]},
+{t:'Tipologia strutturale',f:[['m','tipo','Tipologia',['Arco in muratura','Travate appoggiate','Travate continue','Soletta in C.A.','Sezione tubolare in c.a.','Arco in C.A.','Travate Gerber','Cassone in precompresso','Sezione tubolare in acciaio','Arco in acciaio','Strallato o sospeso','Travate in c.a.p. a cavi post-tesi','Altro']],['x','tipo_altro','Altro (specificare)']]},
+{t:'Fondazioni e vie di attacco',f:[['m','fond','Tipologia delle fondazioni',['Fondazioni dirette','Fondazioni indirette','Murature','Pile in alveo','Non nota']],['m','vie','Classificazione delle vie di attacco',['Rilevato in terra','Rilevato in terra rinforzata/armata','Rilevato in golena','Su roccia','Viadotto in pendenza/curva','Altro']],['x','vie_altro','Altro (specificare)']]},
+{t:'Dati geomorfologici',f:[['r','morf','Morfologia del sito',['Cresta','Pendio dolce (0–10°)','Pendio moderato (10°–25°)','Pendio ripido (>25°)','Pianura','Pianura alla base dei versanti']]]},
+{t:'Schemi geometrici',f:[['p','f_tr','Sezione trasversale'],['p','f_lo','Sezione longitudinale'],['p','f_pi','Pianta']]},
+{t:'Caratteristiche geometriche',f:[['n','luce_tot','Luce complessiva spalla–spalla [m]'],['n','ncamp','N° campate'],['n','luce_camp','Luce singola campata [m]'],['n','hpile','Altezza max pile [m]'],['n','sbalzo','Lunghezza sbalzo soletta [m]'],['n','largh','Larghezza impalcato dalla sede stradale [m]'],['x','curve','Presenza di curve']]},
+{t:'Elementi strutturali',f:[['T','mat','Materiale × tipologia elementi',['C.A.','C.A.P.','Acciaio','Acciaio–Calcestruzzo','Muratura','Legno','Altro'],['Spalle (n° elementi)','Pile (n° elementi)','Impalcato (n° campate)']],['T','imp','Elementi dell\u2019impalcato',['Soletta [n° campate]','Travi [n° elementi]','Traversi [n° elementi]','Arco [n° elementi]','Altro'],['Totali','C.A.','C.A.P.','Acciaio','Acciaio–Calcestruzzo','Muratura','Legno','Altro']]]},
+{t:'Apparecchi di appoggio',f:[['r','app','Apparecchi',['Assenti','Presenti']],['x','app_tipo','Tipo di apparecchi'],['n','app_tot','N° apparecchi totali'],['n','app_ril','N° apparecchi rilevabili'],['m','app_nv','',['Nessun apparecchio visibile']]]},
+{t:'Elementi critici (§ 3.3 Linee Guida)',f:[['r','crit','Elementi critici',['Assenti','Presenti']],['x','crit_tipo','Tipologia di elemento'],['a','crit_deg','Stato di degrado (descrizione sintetica)']]},
+{t:'Informazioni ispezione',f:[['r','acc','Possibilità di accedere al di sotto del ponte',['Sì','No','Parziale']],['n','acc_camp','Se parziale: n° campate completamente ispezionate'],['r','prosp','Ispezionati entrambi i prospetti',['Sì','No']],['x','prosp_n','Prospetto ispezionato']]}
+];
+const E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=id=>document.getElementById(id);
+const idb=new Promise(r=>{const q=indexedDB.open('ponti_l1',1);q.onupgradeneeded=()=>q.result.createObjectStore('p');q.onsuccess=()=>r(q.result)});
+const tx=async(mode,f)=>{const d=await idb;return new Promise(r=>{const q=f(d.transaction('p',mode).objectStore('p'));q.onsuccess=()=>r(q.result)})};
+const put=p=>tx('readwrite',s=>s.put(p,p.id)),all=()=>tx('readonly',s=>s.getAll()),del=id=>tx('readwrite',s=>s.delete(id));
+let cur=null,timer;
+const cnt=p=>Object.values(p.v).filter(x=>Array.isArray(x)?x.length:x).length;
+const V=k=>cur.v[k];
+const inp=(k,l,ty='text',x='')=>`<label>${l}<input data-k="${k}" type="${ty}" ${x} value="${E(V(k))}"></label>`;
+const chips=(k,o,multi)=>`<div class="ch">${o.map(x=>{const v=V(k);const on=multi?(v||[]).includes(x):v===x;return `<button type="button" class="c${on?' on':''}" data-a="${multi?'m':'r'}" data-k="${k}" data-o="${E(x)}">${x}</button>`}).join('')}</div>`;
+function fld([t,k,l,o,c]){
+ if(t=='x')return `<div>${inp(k,l)}</div>`;
+ if(t=='n')return `<div>${inp(k,l,'text','inputmode="decimal"')}</div>`;
+ if(t=='d')return `<div>${inp(k,l,'date')}</div>`;
+ if(t=='a')return `<div class="w"><label>${l}<textarea rows="3" data-k="${k}">${E(V(k))}</textarea></label></div>`;
+ if(t=='r'||t=='m')return `<div class="w">${l?`<label>${l}</label>`:''}${chips(k,o,t=='m')}</div>`;
+ if(t=='g')return `<div class="w g"><b>${l}</b>${inp(k+'_q','Quota s.l.m. [m]','text','inputmode="decimal"')}${inp(k+'_lon','Longitudine','text','inputmode="decimal"')}${inp(k+'_lat','Latitudine','text','inputmode="decimal"')}<button type="button" data-a="gps" data-k="${k}">Usa GPS</button></div>`;
+ if(t=='p')return `<div class="w"><label>${l}</label>${V(k)?`<img class="f" src="${V(k)}">`:''}<div class="row"><label><button type="button" class="p" onclick="this.nextElementSibling.click()">${V(k)?'Sostituisci foto':'Scatta o scegli foto'}</button><input type="file" accept="image/*" data-p="${k}" hidden></label>${V(k)?`<button type="button" data-a="rp" data-k="${k}">Rimuovi</button>`:''}</div></div>`;
+ if(t=='T')return `<div class="w"><label>${l}</label><div class="tb"><table><tr><th></th>${c.map(x=>`<th>${x}</th>`).join('')}</tr>${o.map((r,i)=>`<tr><th>${r}</th>${c.map((_,j)=>`<td><input inputmode="numeric" data-k="${k}|${i}|${j}" value="${E(V(`${k}|${i}|${j}`))}"></td>`).join('')}</tr>`).join('')}</table></div></div>`;
+}
+async function home(){
+ cur=null;const ps=(await all()).sort((a,b)=>a.name.localeCompare(b.name,'it',{numeric:true}));
+ $('h').innerHTML=`<h1>Ispezioni ponti – Livello 1</h1><small>${ps.length} ponti</small>`;
+ $('m').innerHTML=`<div class="row"><button class="p" data-a="new">Nuovo ponte</button><button data-a="exp">Esporta tutto (JSON)</button><button onclick="document.getElementById('imp').click()">Importa JSON</button><input id="imp" type="file" accept=".json" hidden></div>`+
+ (ps.length?ps.map(p=>`<div class="pt"><b>${E(p.name)}</b><span>${cnt(p)} campi compilati</span><button class="p" data-a="open" data-id="${p.id}">Apri</button><button data-a="del" data-id="${p.id}">Elimina</button></div>`).join(''):'<p>Nessun ponte. Tocca «Nuovo ponte» per creare la prima scheda.</p>');
+}
+function form(){
+ $('h').innerHTML=`<button data-a="back">‹ Elenco</button><h1>${E(cur.name)}</h1><small id="st">Salvato</small><button data-a="expone">Esporta ponte</button>`;
+ $('m').innerHTML=S.map((s,i)=>`<details ${i<2?'open':''}><summary>${s.t}</summary><div class="in">${s.f.map(fld).join('')}</div></details>`).join('');
+}
+const dirty=()=>{$('st').textContent='Salvataggio…';clearTimeout(timer);timer=setTimeout(async()=>{await put(cur);$('st').textContent='Salvato'},300)};
+document.addEventListener('input',e=>{const k=e.target.dataset.k;if(k&&cur){cur.v[k]=e.target.value;dirty()}});
+document.addEventListener('change',async e=>{
+ const k=e.target.dataset.p;
+ if(k&&e.target.files[0]){const b=await createImageBitmap(e.target.files[0]);const s=Math.min(1,1000/Math.max(b.width,b.height));const c=document.createElement('canvas');c.width=b.width*s;c.height=b.height*s;c.getContext('2d').drawImage(b,0,0,c.width,c.height);cur.v[k]=c.toDataURL('image/jpeg',.7);await put(cur);keep(()=>form())}
+ if(e.target.id=='imp'&&e.target.files[0]){const j=JSON.parse(await e.target.files[0].text());for(const p of j.ponti)await put(p);home()}
+});
+const dl=(ps,n)=>{const u=URL.createObjectURL(new Blob([JSON.stringify({versione:1,esportato:new Date().toISOString(),schema:S,ponti:ps})],{type:'application/json'}));const l=document.createElement('a');l.href=u;l.download=n;l.click()};
+const keep=f=>{const y=scrollY;f();scrollTo(0,y)};
+document.addEventListener('click',async e=>{
+ const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,k=b.dataset.k;
+ if(a=='new'){const n=prompt('Nome o sigla del ponte');if(n){cur={id:Date.now().toString(36),name:n,v:{}};await put(cur);form()}}
+ else if(a=='open'){cur=(await tx('readonly',s=>s.get(b.dataset.id)));form()}
+ else if(a=='del'){if(confirm('Eliminare questa scheda?')){await del(b.dataset.id);home()}}
+ else if(a=='back'){await put(cur);home()}
+ else if(a=='r'){cur.v[k]=cur.v[k]===b.dataset.o?'':b.dataset.o;b.parentNode.querySelectorAll('.c').forEach(x=>x.classList.toggle('on',cur.v[k]===x.dataset.o));dirty()}
+ else if(a=='m'){const l=cur.v[k]||[],o=b.dataset.o;cur.v[k]=l.includes(o)?l.filter(x=>x!=o):[...l,o];b.classList.toggle('on');dirty()}
+ else if(a=='rp'){delete cur.v[k];await put(cur);keep(()=>form())}
+ else if(a=='gps'){navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>{cur.v[k+'_lon']=p.coords.longitude.toFixed(6);cur.v[k+'_lat']=p.coords.latitude.toFixed(6);if(p.coords.altitude!=null)cur.v[k+'_q']=p.coords.altitude.toFixed(1);dirty();keep(()=>form())},er=>alert('GPS non disponibile: '+er.message+'. Inserisci le coordinate a mano.'),{enableHighAccuracy:true,timeout:20000}):alert('GPS non supportato')}
+ else if(a=='exp'){dl(await all(),'ponti_'+new Date().toISOString().slice(0,10)+'.json')}
+ else if(a=='expone'){await put(cur);dl([cur],'ponte_'+cur.name.replace(/[^\w-]+/g,'_')+'.json')}
+});
+home();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
+</script></body></html>
