@@ -47,6 +47,7 @@ h3{margin:14px 2px 4px;font-size:16px}
 .dr label{margin-top:6px}
 h2{font-size:18px;margin:24px 2px 6px;padding-top:12px;border-top:2px solid var(--ln)}
 main>h2:first-child{border:0;margin-top:4px;padding-top:0}
+.pt{flex-wrap:wrap}.pt b{min-width:160px}
 </style></head><body>
 <header id="h"></header><main id="m"></main>
 <script>
@@ -86,9 +87,9 @@ function fld([t,k,l,o,c]){
 async function home(){
  cur=null;view='home';ctx=null;const A=(await all()).sort((a,b)=>a.name.localeCompare(b.name,'it',{numeric:true})),ps=A.filter(p=>p.t!='l2'),p2=A.filter(p=>p.t=='l2');
  $('h').innerHTML=`<h1>Ispezioni ponti</h1><small>${ps.length} L1 · ${p2.length} L2</small>`;
- $('m').innerHTML=`<h2>Livello 1 – Ispezione ponti</h2><div class="row"><button class="p" data-a="new">Nuovo ponte</button><button data-a="exp">Esporta tutto (JSON)</button><button onclick="document.getElementById('imp').click()">Importa JSON</button><input id="imp" type="file" accept=".json" hidden></div>`+
+ $('m').innerHTML=`<h2>Livello 1 – Ispezione ponti</h2><div class="row"><button class="p" data-a="new">Nuovo ponte</button><button data-a="exp">Esporta tutto (JSON)</button><button onclick="document.getElementById('imp').click()">Importa JSON</button><input id="imp" type="file" accept=".json,.txt" hidden></div>`+
  (ps.length?ps.map(p=>`<div class="pt"><b>${E(p.name)}</b><span>${cnt(p)} campi compilati</span><button class="p" data-a="open" data-id="${p.id}">Apri</button><button data-a="del" data-id="${p.id}">Elimina</button></div>`).join(''):'<p>Nessun ponte. Tocca «Nuovo ponte» per creare la prima scheda.</p>')+
- `<h2>Livello 2 – Schede difettologiche</h2><div class="row"><button class="p" data-a="new2">Nuovo ponte (L2)</button><button data-a="exp2">Esporta tutto L2 (JSON)</button></div>`+
+ `<h2>Livello 2 – Schede difettologiche</h2><div class="row"><button class="p" data-a="new2">Nuovo ponte (L2)</button><button data-a="exp2">Esporta tutto L2 (JSON)</button><button onclick="document.getElementById('imp2').click()">Importa JSON</button><input id="imp2" type="file" accept=".json,.txt" hidden></div>`+
  (p2.length?p2.map(p=>`<div class="pt"><b>${E(p.name)}</b><span>${(p.d||[]).length} schede</span><button class="p" data-a="o2" data-id="${p.id}">Apri</button><button data-a="del" data-id="${p.id}">Elimina</button></div>`).join(''):'<p>Nessun ponte per il livello 2. Tocca «Nuovo ponte (L2)».</p>');
 }
 function form(){view='form';ctx=null;
@@ -100,10 +101,11 @@ document.addEventListener('input',e=>{const k=e.target.dataset.k;if(k&&cur){X().
 document.addEventListener('change',async e=>{
  const k=e.target.dataset.p;
  if(k&&e.target.files[0]){const b=await createImageBitmap(e.target.files[0]);const s=Math.min(1,1000/Math.max(b.width,b.height));const c=document.createElement('canvas');c.width=b.width*s;c.height=b.height*s;c.getContext('2d').drawImage(b,0,0,c.width,c.height);X().v[k]=c.toDataURL('image/jpeg',.7);await put(cur);keep(render)}
- if(e.target.id=='imp'&&e.target.files[0]){const j=JSON.parse(await e.target.files[0].text());for(const p of j.ponti)await put(p);home()}
+ if((e.target.id=='imp'||e.target.id=='imp2')&&e.target.files[0]){try{const j=JSON.parse(await e.target.files[0].text());let n=0;for(const p of j.ponti){if(p.t=='l2'){const o=await tx('readonly',q=>q.get(p.id));if(o){const m=new Map((o.d||[]).map(x=>[x.id,x]));(p.d||[]).forEach(x=>m.set(x.id,x));p.d=[...m.values()]}}await put(p);n++}alert('Importati '+n+' ponti')}catch(x){alert('File non valido')}e.target.value='';home()}
 });
-const dl=async(ps,n)=>{const t=JSON.stringify({versione:1,esportato:new Date().toISOString(),schema:S,ponti:ps});const u=URL.createObjectURL(new Blob([t],{type:'application/json'}));const l=document.createElement('a');l.href=u;l.download=n;l.click();
- if(navigator.share&&navigator.canShare){for(const f of [new File([t],n,{type:'application/json'}),new File([t],n+'.txt',{type:'text/plain'})]){if(navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:n})}catch(e){}break}}}};
+const dlf=async(t,n,ty)=>{const u=URL.createObjectURL(new Blob([t],{type:ty}));const l=document.createElement('a');l.href=u;l.download=n;l.click();
+ if(navigator.share&&navigator.canShare){for(const f of [new File([t],n,{type:ty}),new File([t],n+'.txt',{type:'text/plain'})]){if(navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:n})}catch(e){}break}}}};
+const dl=(ps,n)=>dlf(JSON.stringify({versione:1,esportato:new Date().toISOString(),schema:S,ponti:ps}),n,'application/json');
 const keep=f=>{const y=scrollY;f();scrollTo(0,y)};
 document.addEventListener('click',async e=>{
  const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,k=b.dataset.k;
@@ -113,6 +115,9 @@ document.addEventListener('click',async e=>{
  else if(a=='back'){await put(cur);home()}
  else if(a=='r'){X().v[k]=X().v[k]===b.dataset.o?'':b.dataset.o;b.parentNode.querySelectorAll('.c').forEach(x=>x.classList.toggle('on',X().v[k]===x.dataset.o));dirty();if(b.dataset.rr)keep(render)}
  else if(a=='m'){const l=X().v[k]||[],o=b.dataset.o;X().v[k]=l.includes(o)?l.filter(x=>x!=o):[...l,o];b.classList.toggle('on');dirty()}
+ else if(a=='ej'||a=='ec'){const L=b.dataset.id?cur.d.filter(x=>x.id==b.dataset.id):cur.d.filter(compiled);if(!L.length){alert('Nessuna scheda compilata da esportare');return}
+  const sf=t=>String(t||'').replace(/[^\w-]+/g,'_'),nm=sf(cur.name)+(b.dataset.id?'_sch'+L[0].s+(L[0].v.n?'-'+sf(L[0].v.n):''):'');
+  if(a=='ej')dl([{...cur,d:L}],'difetti_'+nm+'.json');else dlf(csv(cur,L),'difetti_'+nm+'.csv','text/csv')}
  else if(a=='new2'){const n=prompt('Nome o sigla del ponte (livello 2)');if(n){cur={id:Date.now().toString(36),t:'l2',name:n,v:{},d:[]};await put(cur);dif()}}
  else if(a=='o2'){cur=await tx('readonly',q=>q.get(b.dataset.id));dif()}
  else if(a=='exp2'){dl((await all()).filter(p=>p.t=='l2'),'schede_difetti_'+new Date().toISOString().slice(0,10)+'.json')}
@@ -135,12 +140,32 @@ const cp=(k,o,rr,cls='')=>`<div class="ch">${o.map(([v,l])=>`<button type="butto
 const ks=(k,m,lb,t)=>{const o=[['0','0,2'],['1','0,5'],['2','1']].filter(([v])=>m[v]=='1').map(([v,l])=>[v,l+(lb&&lb[v]?' · '+lb[v]:'')]);return o.length?`<label>${t}</label>`+cp(k,o,0):''};
 const ck=(k,l,nt)=>`<div class="dr${V(k)?' on':''}"><div class="dh"><b>${l}</b>${cp(k,[['1','Presente']],1)}</div>${V(k)?inp(k+'.f','N° foto')+(nt?inp(k+'.n','Note'):''):''}</div>`;
 const prog=d=>d.s==20?Object.values(d.v).filter(Boolean).length+' campi':CAT[d.s].r.filter(Array.isArray).filter((_,i)=>d.v['r'+i]).length+'/'+CAT[d.s].r.filter(Array.isArray).length+' righe';
+const ST={v:'visto',np:'non presente',nr:'non rilevabile',na:'non applicabile'},KV=['0,2','0,5','1'];
+const qc=s=>{s=String(s??'');return /[;"\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+const compiled=d=>Object.keys(d.v).some(k=>k!='n'&&d.v[k]);
+function csv(rec,L){
+ const o=[['ponte','strada','progressiva_km','tecnico','data','scheda','tipo','n_elemento','codice','descrizione','G','stato','K1','K2','PS','n_foto','note']];
+ for(const d of L){
+  const v=d.v,b=[rec.name,rec.v.strada,rec.v.km,rec.v.tecnico,rec.v.data,d.s,NM(d.s),v.n||''],kv=k=>v[k]==null||v[k]===''?'':KV[v[k]];
+  const row=(c,t,g,st,k1,k2,ps,f,n)=>o.push([...b,c,t,g,st,k1,k2,ps,f,n].map(x=>x??''));
+  if(d.s==20){
+   [['ncorsie','N° corsie'],['lcarr','Larghezza carreggiata [m]'],['lmarc','Larghezza marciapiede [m]'],['hmarc','Altezza marciapiede [m]']].forEach(([k,l])=>v[k]&&row('GEN',l,'',v[k]));
+   v.marc&&row('GEN','Marciapiede','',{1:'sì, su un lato',2:'sì, su entrambi i lati',0:'no'}[v.marc]);
+   v.caso&&row('GEN','Barriere laterali','','caso '+v.caso);
+   EL.forEach(([n,g,t],i)=>v['e'+i]&&row('El.Acc_'+n,t,'','presente','','','',v['e'+i+'.f'],v['e'+i+'.n']));
+   [['g.','Guardiavia'],['p.','Parapetto']].forEach(([p,nm])=>{BL.concat([['pg','Presente come guardiavia'],['pp','Presente come parapetto']]).forEach(([k,l])=>v[p+k]&&row(nm,l,'','presente','','','',v[p+k+'.f']));v[p+'h']&&row(nm,'Altezza (cm)','',v[p+'h'])});
+  }else{let i=-1;CAT[d.s].r.forEach(r=>{if(!Array.isArray(r))return;i++;const s=v['r'+i];if(!s)return;
+   row(r[0],r[1],r[2],ST[s],s=='v'?kv('r'+i+'.a'):'',s=='v'?kv('r'+i+'.b'):'',v['r'+i+'.p']?'PS':'',v['r'+i+'.f'],v['r'+i+'.n'])})}
+  v.note&&row('NOTE','Eventuali note','','','','','','',v.note);
+ }
+ return '\ufeff'+o.map(r=>r.map(qc).join(';')).join('\r\n');
+}
 function render(){(view=='sch'?sch:view=='dif'?dif:form)()}
 function dif(){
  view='dif';ctx=null;cur.d=cur.d||[];scrollTo(0,0);
  $('h').innerHTML=`<button data-a="back">‹ Elenco</button><h1>${E(cur.name)}</h1><small id="st">Salvato</small>`;
- $('m').innerHTML=`<details open><summary>Anagrafica (comune a tutte le schede)</summary><div class="in">${inp('strada','Strada di appartenenza')}${inp('km','Progressiva km')}${inp('tecnico','Tecnico rilevatore')}${inp('data','Data ispezione','date')}</div></details>`+
- (cur.d.length?cur.d.map(d=>`<div class="pt"><b>${d.s} · ${NM(d.s)}${d.v.n?' · N° '+E(d.v.n):''}</b><span>${prog(d)}</span><button class="p" data-a="os" data-id="${d.id}">Apri</button><button data-a="ds" data-id="${d.id}">Elimina</button></div>`).join(''):'<p>Nessuna scheda compilata per questo ponte.</p>')+
+ $('m').innerHTML=`<details open><summary>Anagrafica (comune a tutte le schede)</summary><div class="in">${inp('strada','Strada di appartenenza')}${inp('km','Progressiva km')}${inp('tecnico','Tecnico rilevatore')}${inp('data','Data ispezione','date')}</div></details><div class="row"><button class="p" data-a="ej">Esporta ponte (JSON)</button><button data-a="ec">Esporta ponte (CSV)</button></div>`+
+ (cur.d.length?cur.d.map(d=>`<div class="pt"><b>${d.s} · ${NM(d.s)}${d.v.n?' · N° '+E(d.v.n):''}</b><span>${prog(d)}</span><button class="p" data-a="os" data-id="${d.id}">Apri</button><button data-a="ej" data-id="${d.id}">JSON</button><button data-a="ec" data-id="${d.id}">CSV</button><button data-a="ds" data-id="${d.id}">Elimina</button></div>`).join(''):'<p>Nessuna scheda compilata per questo ponte.</p>')+
  `<details open><summary>Aggiungi scheda</summary><div class="in">${Array.from({length:20},(_,i)=>`<button data-a="add" data-s="${i+1}">${i+1} · ${NM(i+1)}</button>`).join('')}</div></details>`;
 }
 function sch(){
