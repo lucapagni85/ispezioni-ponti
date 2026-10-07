@@ -90,7 +90,8 @@ document.addEventListener('change',async e=>{
  if(k&&e.target.files[0]){const b=await createImageBitmap(e.target.files[0]);const s=Math.min(1,1000/Math.max(b.width,b.height));const c=document.createElement('canvas');c.width=b.width*s;c.height=b.height*s;c.getContext('2d').drawImage(b,0,0,c.width,c.height);cur.v[k]=c.toDataURL('image/jpeg',.7);await put(cur);keep(()=>form())}
  if(e.target.id=='imp'&&e.target.files[0]){const j=JSON.parse(await e.target.files[0].text());for(const p of j.ponti)await put(p);home()}
 });
-const dl=(ps,n)=>{const u=URL.createObjectURL(new Blob([JSON.stringify({versione:1,esportato:new Date().toISOString(),schema:S,ponti:ps})],{type:'application/json'}));const l=document.createElement('a');l.href=u;l.download=n;l.click()};
+const dl=async(ps,n)=>{const t=JSON.stringify({versione:1,esportato:new Date().toISOString(),schema:S,ponti:ps});const u=URL.createObjectURL(new Blob([t],{type:'application/json'}));const l=document.createElement('a');l.href=u;l.download=n;l.click();
+ if(navigator.share&&navigator.canShare){for(const f of [new File([t],n,{type:'application/json'}),new File([t],n+'.txt',{type:'text/plain'})]){if(navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:n})}catch(e){}break}}}};
 const keep=f=>{const y=scrollY;f();scrollTo(0,y)};
 document.addEventListener('click',async e=>{
  const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,k=b.dataset.k;
