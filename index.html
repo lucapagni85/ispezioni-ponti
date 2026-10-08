@@ -48,6 +48,7 @@ h3{margin:14px 2px 4px;font-size:16px}
 h2{font-size:18px;margin:24px 2px 6px;padding-top:12px;border-top:2px solid var(--ln)}
 main>h2:first-child{border:0;margin-top:4px;padding-top:0}
 .pt{flex-wrap:wrap}.pt b{min-width:160px}
+@media print{header,button,.row{display:none}body{background:#fff}}
 </style></head><body>
 <header id="h"></header><main id="m"></main>
 <script>
@@ -121,6 +122,10 @@ document.addEventListener('click',async e=>{
  else if(a=='new2'){const n=prompt('Nome o sigla del ponte (livello 2)');if(n){cur={id:Date.now().toString(36),t:'l2',name:n,v:{},d:[]};await put(cur);dif()}}
  else if(a=='o2'){cur=await tx('readonly',q=>q.get(b.dataset.id));dif()}
  else if(a=='exp2'){dl((await all()).filter(p=>p.t=='l2'),'schede_difetti_'+new Date().toISOString().slice(0,10)+'.json')}
+ else if(a=='cda'){await put(cur);cda()}
+ else if(a=='backc'){dif()}
+ else if(a=='prn'){print()}
+ else if(a=='ecda'){const R=calcCdA(),o=[['ponte','passaggio','risultato','dettaglio']];R.S.forEach(s=>o.push([cur.name,s.n,s.val,s.det]));R.M.forEach(m=>o.push([cur.name,'DATO MANCANTE',m,'']));R.W.forEach(w=>o.push([cur.name,'AVVISO',w,'']));dlf('\ufeff'+o.map(r=>r.map(qc).join(';')).join('\r\n'),'cda_'+cur.name.replace(/[^\w-]+/g,'_')+'.csv','text/csv')}
  else if(a=='back2'){await put(cur);form()}
  else if(a=='add'){const d={id:Date.now().toString(36),s:+b.dataset.s,v:{}};cur.d.push(d);await put(cur);ctx=d;sch()}
  else if(a=='os'){ctx=cur.d.find(x=>x.id==b.dataset.id);sch()}
@@ -157,21 +162,22 @@ function csv(rec,L){
   }else{let i=-1;CAT[d.s].r.forEach(r=>{if(!Array.isArray(r))return;i++;const s=v['r'+i];if(!s)return;
    row(r[0],r[1],r[2],ST[s],s=='v'?kv('r'+i+'.a'):'',s=='v'?kv('r'+i+'.b'):'',v['r'+i+'.p']?'PS':'',v['r'+i+'.f'],v['r'+i+'.n'])})}
   v.note&&row('NOTE','Eventuali note','','','','','','',v.note);
+  v.crit=='1'&&row('FLAG','Elemento critico (§ 3.3)','','sì');v.cond=='1'&&row('FLAG','Condizione critica in atto','','sì');
  }
  return '\ufeff'+o.map(r=>r.map(qc).join(';')).join('\r\n');
 }
-function render(){(view=='sch'?sch:view=='dif'?dif:form)()}
+function render(){(view=='sch'?sch:view=='dif'?dif:view=='cda'?cda:form)()}
 function dif(){
  view='dif';ctx=null;cur.d=cur.d||[];scrollTo(0,0);
  $('h').innerHTML=`<button data-a="back">‹ Elenco</button><h1>${E(cur.name)}</h1><small id="st">Salvato</small>`;
- $('m').innerHTML=`<details open><summary>Anagrafica (comune a tutte le schede)</summary><div class="in">${inp('strada','Strada di appartenenza')}${inp('km','Progressiva km')}${inp('tecnico','Tecnico rilevatore')}${inp('data','Data ispezione','date')}</div></details><div class="row"><button class="p" data-a="ej">Esporta ponte (JSON)</button><button data-a="ec">Esporta ponte (CSV)</button></div>`+
+ $('m').innerHTML=`<details open><summary>Anagrafica (comune a tutte le schede)</summary><div class="in">${inp('strada','Strada di appartenenza')}${inp('km','Progressiva km')}${inp('tecnico','Tecnico rilevatore')}${inp('data','Data ispezione','date')}</div></details>${clUI()}<div class="row"><button class="p" data-a="cda">Classe di attenzione</button><button class="p" data-a="ej">Esporta ponte (JSON)</button><button data-a="ec">Esporta ponte (CSV)</button></div>`+
  (cur.d.length?cur.d.map(d=>`<div class="pt"><b>${d.s} · ${NM(d.s)}${d.v.n?' · N° '+E(d.v.n):''}</b><span>${prog(d)}</span><button class="p" data-a="os" data-id="${d.id}">Apri</button><button data-a="ej" data-id="${d.id}">JSON</button><button data-a="ec" data-id="${d.id}">CSV</button><button data-a="ds" data-id="${d.id}">Elimina</button></div>`).join(''):'<p>Nessuna scheda compilata per questo ponte.</p>')+
  `<details open><summary>Aggiungi scheda</summary><div class="in">${Array.from({length:20},(_,i)=>`<button data-a="add" data-s="${i+1}">${i+1} · ${NM(i+1)}</button>`).join('')}</div></details>`;
 }
 function sch(){
  view='sch';const d=ctx;scrollTo(0,0);
  $('h').innerHTML=`<button data-a="back3">‹ Schede</button><h1>${d.s} · ${NM(d.s)}</h1><small id="st">Salvato</small>`;
- $('m').innerHTML=`<div class="in" style="padding:0 0 8px">${inp('n','N° elemento (es. pila 2)')}</div>`+(d.s==20?s20():rows(d));
+ $('m').innerHTML=`<div class="in" style="padding:0 0 8px">${inp('n','N° elemento (es. pila 2)')}${d.s==20?'':`<div class="w"><label>Ai fini della classe di attenzione</label>${cp('crit',[['1','Elemento critico (§ 3.3)']],0,'ps')}${cp('cond',[['1','Condizione critica in atto']],0,'ps')}</div>`}</div>`+(d.s==20?s20():rows(d));
 }
 function rows(d){
  let i=-1;
@@ -191,6 +197,108 @@ function s20(){
  if(c){h+=grp('g.','Guardiavia',c=='3'?[BL[0],['pg','Presente come guardiavia'],['pp','Presente come parapetto'],...BL.slice(1)]:BL);if(c!='1')h+=grp('p.','Parapetto',BL)}
  return h;
 }
+/* ===== Classe di Attenzione strutturale e fondazionale (LG DM 204/2022, § 4.2) ===== */
+const LVL=['Bassa','Medio-Bassa','Media','Medio-Alta','Alta'],LDF=['Basso','Medio-Basso','Medio','Medio-Alto','Alto'];
+const T46={'Travate appoggiate':{'C.a.':'1234','C.a.p.':'1223','Acciaio':'0123','Metallo (ponti storici)':'1234','Legno':'2344','Misto (acciaio-c.a.)':'1234'},
+'Travate continue / Telaio':{'C.a.':'0123','C.a.p.':'0122','Acciaio':'0012','Metallo (ponti storici)':'0123','Misto (acciaio-c.a.)':'0123'},
+'Arco massiccio':{'Muratura':'0112','C.a.':'0122'},'Arco sottile':{'C.a.':'1223'},
+'Travate Gerber / Ponti a stampella':{'C.a.':'3444','C.a.p.':'3334','Acciaio':'2334','Metallo (ponti storici)':'3344','Misto (acciaio-c.a.)':'3444'},
+'Soletta appoggiata':{'C.a.':'1234'},'Soletta incastrata':{'C.a.':'0123'}};
+// Fig. 4.2: classe finale [schema Bassa..Alta] per livello di difettosità corretto (Basso..Alto)
+const MV=[[0,0,0,1,1],[0,1,1,2,2],[1,2,2,3,3],[2,2,3,3,3],[2,3,3,4,4]];
+const T43={A:[4,4,3],B:[4,3,2],C:[3,2,1],D:[2,1,0],E:[0,0,0]},T48=[[4,3,2],[3,2,1],[2,1,0]];
+// Tab. 4.10: MX[pericolosità Bassa..Alta][vulnerabilità Alta..Bassa][esposizione Alta..Bassa]; B=Bassa b=Medio-Bassa M=Media a=Medio-Alta A=Alta
+const MX=[['AAAAA','aMMMb','MMMbB','MMbBB','bbBBB'],['AAAAA','aaMMM','aMMbb','MMbbB','MbbBB'],['AAAAA','aaaMM','aMMMM','MMMbb','MMbBB'],['AAAAA','AaaaM','aaMMM','MMMbb','MMbbB'],['AAAAA','AAaaa','AaaMM','aMMMM','aMMbb']];
+const num=s=>{const x=parseFloat(String(s??'').replace(',','.'));return isNaN(x)?null:x},c4=n=>Math.max(0,Math.min(4,n));
+const normaCl=(c,y,L)=>{const big=L>=10;if(y<(c=='I'?1952:1990))return['A',''];if(y<=(big?2005:1990))return['B',''];if(y>=(big?2008:2005))return['C',''];return['B','Anno di progetto in un intervallo non coperto dalle LG: assunta classe B (cautelativa)']};
+function calcCdA(){
+ const v=cur.v,S=[],W=[],M=[],st=(n,val,det)=>S.push({n,val,det:det||''});
+ const kel=num(v.cl_kel)||1,nel=num(v.cl_nel)||6,SC=(cur.d||[]).filter(d=>d.s!=20&&CAT[d.s]);
+ let dl=null,G3=0;const wh=[];
+ // 1. livello di difettosità (Tab. 4.5)
+ if(!SC.length)M.push('Schede difetti compilate');
+ else{dl=0;SC.forEach(d=>{
+  const nm=d.s+' · '+NM(d.s)+(d.v.n?' · '+d.v.n:''),rows=CAT[d.s].r.filter(Array.isArray);let nc=0,nr=0;
+  if(!d.v.n)W.push('Scheda '+d.s+' senza N° elemento');
+  if(d.v.cond=='1'){dl=4;wh.push([4,nm+': condizione critica in atto'])}
+  rows.forEach((r,i)=>{const s=d.v['r'+i];if(!s){nc++;return}if(s=='nr'&&r[2]>=4)nr++;if(s!='v')return;
+   const g=r[2],a=d.v['r'+i+'.a'],b=d.v['r'+i+'.b'],no=x=>x==null||x==='';
+   if((/1/.test(r[3])&&no(a))||(/1/.test(r[4])&&no(b)))W.push(nm+': «'+r[1]+'» senza K1/K2'+(g>=4?' (K2 mancante: assunta elevata)':''));
+   const k=no(b)?(g>=4?1:.2):[.2,.5,1][b],el=k>=kel,ps=d.v['r'+i+'.p']=='1',crit=d.v.crit=='1'||r[0]=='Ril/Fond_1';
+   if(g<=3){G3++;return}
+   const l=crit?4:el&&ps?3:el?2:g==5?2:1;
+   wh.push([l,nm+': '+r[1]+' (G'+g+', K2 '+String(k).replace('.',',')+')'+(crit?', elemento critico':'')+(ps?', PS':'')]);dl=Math.max(dl,l)});
+  if(nc)W.push(nm+': '+nc+' righe non compilate');
+  if(nr)W.push(nm+': '+nr+' difetti G≥4 non rilevabili: verificare gli elementi critici (§ 3.3)')});
+  if(G3>=nel){dl=Math.max(dl,1);wh.push([1,G3+' difetti G≤3 visti (soglia '+nel+')'])}
+  st('Livello di difettosità',LDF[dl],wh.sort((a,b)=>b[0]-a[0]).slice(0,3).map(x=>x[1]).join(' | ')||'nessun difetto significativo')}
+ // 2. vulnerabilità (Fig. 4.2)
+ const L=num(v.cl_lmax),Lm=num(v.cl_lmed),nc=num(v.cl_nc),ya=num(v.cl_anno),yi=num(v.cl_anno_int),y=yi||ya;let vul=null;
+ if(dl==4){vul=4;st('Vulnerabilità','Alta','difettosità ALTO: vulnerabilità ALTA a prescindere dagli altri fattori')}
+ else if(dl!=null){
+  const sc=[[v.cl_t,v.cl_m],[v.cl_t2,v.cl_m2]].filter(x=>x[0]).map(([t,m])=>{const r=T46[t]&&T46[t][m];return r&&L!=null&&nc!=null?c4(+r[L<=5?0:L<15?1:L<25?2:3]+(nc>3?1:0)):null}).filter(x=>x!=null);
+  let nor=v.cl_nor?[v.cl_nor,'impostata a mano']:null;
+  if(!nor){const yp=num(v.cl_aprog)??ya;if(yp!=null&&L!=null){nor=normaCl(v.cl_cat=='I'?'I':'II',yp,L);
+   if(num(v.cl_aprog)==null)W.push('Anno di progetto non indicato: per la norma è usato l\'anno di costruzione');
+   if(v.cl_cat!='I'&&v.cl_cat!='II')W.push('Categoria di progetto non indicata: assunta 2ª categoria (LG)');
+   if(nor[1])W.push(nor[1])}}
+  if(y==null)M.push('Anno di costruzione (o dell\'ultimo intervento significativo)');
+  if(!sc.length)M.push('Schema statico, materiale, luce della campata più lunga e n° campate');
+  if(!nor)M.push('Anno di progetto o di costruzione, e luce della campata più lunga (norma di progettazione)');
+  if(y!=null&&sc.length&&nor){
+   const r=y<=1945?0:y>=1980?2:1,s0=Math.max(...sc);let a=dl;
+   if(dl>0&&dl<4){if(r==2)a=dl+1;else if(r==0&&dl!=3)a=dl-1}
+   const a1=a;if(a>0&&a<4)a+=nor[0]=='A'?1:nor[0]=='C'?-1:0;
+   vul=MV[a][s0];
+   st('Rapidità di evoluzione del degrado',LDF[a1],(yi?'ultimo intervento ':'costruzione ')+y+' → '+['≤ 1945','1945-1980','≥ 1980'][r]);
+   st('Norma di progettazione',LDF[a],'classe '+nor[0]+(nor[1]?' ('+nor[1]+')':''));
+   st('Schema statico, materiale, luce',LVL[s0],'Tab. 4.6'+(nc>3?' (+1 livello: più di 3 campate)':'')+(sc.length>1?' (più gravoso tra i due schemi)':''));
+   st('Vulnerabilità',LVL[vul])}}
+ // 3. pericolosità (Tab. 4.3-4.4)
+ let pe=null;const vc=num(v.cl_vc);
+ if(v.cl_str&&vc!=null){const f=vc>=700?0:vc>300?1:2;pe=T43[v.cl_str][f];st('Pericolosità',LVL[pe],'classe stradale '+v.cl_str+', '+vc+' veicoli commerciali/giorno per corsia (frequenza '+['alta','media','bassa'][f]+')')}
+ else M.push('Classe stradale e veicoli commerciali/giorno per corsia');
+ // 4. esposizione (Tab. 4.7-4.8, Fig. 4.3)
+ let es=null;const tg=num(v.cl_tgm);
+ if(tg!=null&&Lm!=null&&v.cl_ente){
+  let e=T48[Lm>50?0:Lm>20?1:2][tg>=25000?0:tg>10000?1:2];const e0=e;
+  if(v.cl_ped=='1')e=c4(e+1);
+  if(v.cl_alt!='P')e=c4(e+1);
+  if(!v.cl_alt)W.push('Alternative stradali non indicate: assunta assenza (cautelativa)');
+  es=c4(e+{A:1,M:0,B:-1}[v.cl_ente]);
+  st('Esposizione',LVL[es],'TGM '+tg+', luce media '+Lm+' m → '+LVL[e0]+(v.cl_ped=='1'?'; +1 pedoni':'')+'; alternative '+(v.cl_alt=='P'?'presenti':'assenti')+'; ente scavalcato '+{A:'alta',M:'media',B:'bassa'}[v.cl_ente])}
+ else M.push('TGM, luce media delle campate ed ente scavalcato');
+ if(v.cl_mp=='1')st('Merci pericolose','Sì','non cambia la classe: priorità più alta tra ponti della stessa classe');
+ let cda=null;
+ if(pe!=null&&vul!=null&&es!=null){cda='BbMaA'.indexOf(MX[pe][4-vul][4-es]);st('Classe di attenzione strutturale e fondazionale',LVL[cda].toUpperCase(),'Tab. 4.10')}
+ return{S,W,M,cda}}
+const clUI=()=>{const N='inputmode="decimal"',I='inputmode="numeric"',yn=k=>cp(k,[['1','Sì'],['0','No']],0),
+ sm=(a,b)=>`<label>Schema statico</label>${cp(a,Object.keys(T46).map(x=>[x,x]),1)}${V(a)&&T46[V(a)]?`<label>Materiale dell’impalcato</label>${cp(b,Object.keys(T46[V(a)]).map(x=>[x,x]),1)}`:''}`;
+ return `<details><summary>Dati per la classificazione (CdA strutturale e fondazionale)</summary><div class="in">
+<div class="w">${sm('cl_t','cl_m')}</div>
+<div class="w"><details><summary>Secondo schema (se il ponte ne ha di diversi)</summary><div class="in"><div class="w">${sm('cl_t2','cl_m2')}</div></div></details></div>
+${inp('cl_lmax','Luce della campata più lunga [m]','text',N)}${inp('cl_lmed','Luce media delle campate [m]','text',N)}${inp('cl_nc','N° campate','text',I)}
+${inp('cl_anno','Anno di costruzione','text',I)}${inp('cl_anno_int','Anno ultimo intervento significativo (se documentato)','text',I)}
+<div class="w"><label>Categoria di progetto</label>${cp('cl_cat',[['I','1ª categoria'],['II','2ª categoria']],0)}</div>
+${inp('cl_aprog','Anno di progetto (norme applicate)','text',I)}
+<div class="w"><label>Norma di progettazione (se nota, sostituisce il calcolo automatico)</label>${cp('cl_nor',[['A','Classe A'],['B','Classe B'],['C','Classe C']],0)}</div>
+<div class="w"><label>Classe stradale (limitazione di carico)</label>${cp('cl_str',[['A','A · carichi NTC'],['B','B · 44 t'],['C','C · 26 t'],['D','D · 8 t'],['E','E · 3,5 t']],0)}</div>
+${inp('cl_vc','Veicoli commerciali/giorno per corsia','text',I)}${inp('cl_tgm','TGM veicoli/giorno (intera carreggiata)','text',I)}
+<div class="w"><label>Alternative stradali adeguate</label>${cp('cl_alt',[['P','Presenti'],['A','Assenti']],0)}</div>
+<div class="w"><label>Ente scavalcato</label>${cp('cl_ente',[['A','Alta · ferrovia, zona edificata, strada primaria'],['M','Media · strada secondaria, corso d’acqua'],['B','Bassa · depressione del terreno']],0)}</div>
+<div class="w"><label>Frequente transito di pedoni (marciapiedi, centro abitato)</label>${yn('cl_ped')}</div>
+<div class="w"><label>Trasporto merci pericolose non occasionale</label>${yn('cl_mp')}</div>
+${inp('cl_kel','Convenzione: K2 «elevata» se ≥ (0,5 oppure 1)','text',N)}${inp('cl_nel','Convenzione: n° difetti G≤3 che valgono «numero elevato»','text',I)}
+</div></details>`};
+function cda(){
+ view='cda';ctx=null;scrollTo(0,0);const R=calcCdA(),li=a=>a.length?'<ul>'+a.map(x=>`<li>${E(x)}</li>`).join('')+'</ul>':'';
+ $('h').innerHTML=`<button data-a="backc">‹ Schede</button><h1>CdA · ${E(cur.name)}</h1>`;
+ $('m').innerHTML=`<div class="row"><button class="p" data-a="ecda">Esporta CSV</button><button data-a="prn">Stampa / PDF</button></div>`+
+ (R.cda!=null?`<div class="pt"><b style="font-size:21px">CdA strutturale e fondazionale: ${LVL[R.cda].toUpperCase()}</b></div>`:`<div class="pt"><b>CdA non calcolabile: mancano dei dati</b></div>`)+
+ (R.M.length?'<h3>Dati mancanti</h3>'+li(R.M):'')+
+ `<div class="tb"><table><tr><th>Passaggio</th><th>Risultato</th><th>Dettaglio</th></tr>${R.S.map(s=>`<tr><th>${E(s.n)}</th><td><b>${E(s.val)}</b></td><td>${E(s.det)}</td></tr>`).join('')}</table></div>`+
+ (R.W.length?'<h3>Avvisi</h3>'+li(R.W):'')+
+ `<p><small>Calcolo secondo le Linee Guida (DM 204/2022) § 4.2, Tab. 4.3-4.10 e Fig. 4.2-4.3. Il livello di difettosità usa le convenzioni indicate nei dati di classificazione: è una proposta da verificare dal tecnico.</small></p>`}
 home();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
