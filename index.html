@@ -49,6 +49,8 @@ h2{font-size:18px;margin:24px 2px 6px;padding-top:12px;border-top:2px solid var(
 main>h2:first-child{border:0;margin-top:4px;padding-top:0}
 .pt{flex-wrap:wrap}.pt b{min-width:160px}
 @media print{header,button,.row{display:none}body{background:#fff}}
+.ph{display:flex;gap:8px;margin-top:6px}.th{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.th img{height:72px;border:1px solid var(--ln);border-radius:6px}
+#ov{position:fixed;inset:0;background:#000e;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;padding:10px}#ov img{max-width:100%;max-height:72vh}#ov p{margin:8px;text-align:center}
 </style></head><body>
 <header id="h"></header><main id="m"></main>
 <script>
@@ -67,8 +69,8 @@ const S=[
 ];
 const E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const $=id=>document.getElementById(id);
-const idb=new Promise(r=>{const q=indexedDB.open('ponti_l1',1);q.onupgradeneeded=()=>q.result.createObjectStore('p');q.onsuccess=()=>r(q.result)});
-const tx=async(mode,f)=>{const d=await idb;return new Promise(r=>{const q=f(d.transaction('p',mode).objectStore('p'));q.onsuccess=()=>r(q.result)})};
+const idb=new Promise(r=>{const q=indexedDB.open('ponti_l1',2);q.onupgradeneeded=()=>{const d=q.result;['p','f'].forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s)})};q.onsuccess=()=>r(q.result)});
+const tx=async(mode,f,st='p')=>{const d=await idb;return new Promise(r=>{const q=f(d.transaction(st,mode).objectStore(st));q.onsuccess=()=>r(q.result)})};
 const put=p=>tx('readwrite',s=>s.put(p,p.id)),all=()=>tx('readonly',s=>s.getAll()),del=id=>tx('readwrite',s=>s.delete(id));
 let cur=null,timer,ctx=null,view='home';const X=()=>ctx||cur;
 const cnt=p=>Object.values(p.v).filter(x=>Array.isArray(x)?x.length:x).length;
@@ -100,6 +102,7 @@ function form(){view='form';ctx=null;
 const dirty=()=>{$('st').textContent='Salvataggio…';clearTimeout(timer);timer=setTimeout(async()=>{await put(cur);$('st').textContent='Salvato'},300)};
 document.addEventListener('input',e=>{const k=e.target.dataset.k;if(k&&cur){X().v[k]=e.target.value;dirty()}});
 document.addEventListener('change',async e=>{
+ const ph=e.target.dataset.ph;if(ph&&e.target.files[0]){const f=e.target.files[0],T=e.target.dataset;e.target.value='';try{await addFoto(ph,T.d,T.c,f)}catch(x){alert('Foto non salvata: '+x.message)}return}
  const k=e.target.dataset.p;
  if(k&&e.target.files[0]){const b=await createImageBitmap(e.target.files[0]);const s=Math.min(1,1000/Math.max(b.width,b.height));const c=document.createElement('canvas');c.width=b.width*s;c.height=b.height*s;c.getContext('2d').drawImage(b,0,0,c.width,c.height);X().v[k]=c.toDataURL('image/jpeg',.7);await put(cur);keep(render)}
  if((e.target.id=='imp'||e.target.id=='imp2')&&e.target.files[0]){try{const j=JSON.parse(await e.target.files[0].text());let n=0;for(const p of j.ponti){if(p.t=='l2'){const o=await tx('readonly',q=>q.get(p.id));if(o){const m=new Map((o.d||[]).map(x=>[x.id,x]));(p.d||[]).forEach(x=>m.set(x.id,x));p.d=[...m.values()]}}await put(p);n++}alert('Importati '+n+' ponti')}catch(x){alert('File non valido')}e.target.value='';home()}
@@ -112,7 +115,7 @@ document.addEventListener('click',async e=>{
  const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,k=b.dataset.k;
  if(a=='new'){const n=prompt('Nome o sigla del ponte');if(n){cur={id:Date.now().toString(36),name:n,v:{}};await put(cur);form()}}
  else if(a=='open'){cur=(await tx('readonly',s=>s.get(b.dataset.id)));form()}
- else if(a=='del'){if(confirm('Eliminare questa scheda?')){await del(b.dataset.id);home()}}
+ else if(a=='del'){if(confirm('Eliminare questa scheda?')){await del(b.dataset.id);await tx('readwrite',s=>s.delete(IDBKeyRange.bound(b.dataset.id+'|',b.dataset.id+'|\uffff')),'f');home()}}
  else if(a=='back'){await put(cur);home()}
  else if(a=='r'){X().v[k]=X().v[k]===b.dataset.o?'':b.dataset.o;b.parentNode.querySelectorAll('.c').forEach(x=>x.classList.toggle('on',X().v[k]===x.dataset.o));dirty();if(b.dataset.rr)keep(render)}
  else if(a=='m'){const l=X().v[k]||[],o=b.dataset.o;X().v[k]=l.includes(o)?l.filter(x=>x!=o):[...l,o];b.classList.toggle('on');dirty()}
@@ -122,6 +125,10 @@ document.addEventListener('click',async e=>{
  else if(a=='new2'){const n=prompt('Nome o sigla del ponte (livello 2)');if(n){cur={id:Date.now().toString(36),t:'l2',name:n,v:{},d:[]};await put(cur);dif()}}
  else if(a=='o2'){cur=await tx('readonly',q=>q.get(b.dataset.id));dif()}
  else if(a=='exp2'){dl((await all()).filter(p=>p.t=='l2'),'schede_difetti_'+new Date().toISOString().slice(0,10)+'.json')}
+ else if(a=='ez'){await expZip()}
+ else if(a=='fv'){const r=await tx('readonly',s=>s.get(cur.id+'|'+b.dataset.n),'f');if(!r)return;const u=URL.createObjectURL(r.b),o=document.createElement('div');o.id='ov';o.dataset.u=u;o.innerHTML=`<img src="${u}"><p><b>${E(r.n)}</b> · ${E(capOf(r))}</p><div class="row"><button data-a="fx">Chiudi</button><button data-a="fd" data-n="${r.n}">Elimina foto</button></div>`;document.body.appendChild(o)}
+ else if(a=='fx'){const o=$('ov');if(o){URL.revokeObjectURL(o.dataset.u);o.remove()}}
+ else if(a=='fd'){const n=b.dataset.n;if(confirm('Eliminare la foto '+n+'?')){const r=await tx('readonly',s=>s.get(cur.id+'|'+n),'f');await tx('readwrite',s=>s.delete(cur.id+'|'+n),'f');const d=r&&cur.d.find(x=>x.id==r.sid);if(d&&d.v[r.k])d.v[r.k]=String(d.v[r.k]).split(/\s*[,;]\s*/).filter(t=>t&&t.padStart(3,'0')!=n).join(', ');await put(cur);const o=$('ov');if(o){URL.revokeObjectURL(o.dataset.u);o.remove()}if(view=='sch')keep(render)}}
  else if(a=='cda'){await put(cur);cda()}
  else if(a=='backc'){dif()}
  else if(a=='prn'){print()}
@@ -143,7 +150,7 @@ const BL=[['ass','Assente'],['mur','Tipologia: muratura'],['rin','Tipologia: rin
 const NM=n=>n==20?'Elementi accessori':CAT[n].t+(CAT[n].m?' – '+CAT[n].m:'');
 const cp=(k,o,rr,cls='')=>`<div class="ch">${o.map(([v,l])=>`<button type="button" class="c ${cls}${V(k)===v?' on':''}" data-a="r" data-k="${k}" data-o="${E(v)}"${rr?' data-rr="1"':''}>${l}</button>`).join('')}</div>`;
 const ks=(k,m,lb,t)=>{const o=[['0','0,2'],['1','0,5'],['2','1']].filter(([v])=>m[v]=='1').map(([v,l])=>[v,l+(lb&&lb[v]?' · '+lb[v]:'')]);return o.length?`<label>${t}</label>`+cp(k,o,0):''};
-const ck=(k,l,nt)=>`<div class="dr${V(k)?' on':''}"><div class="dh"><b>${l}</b>${cp(k,[['1','Presente']],1)}</div>${V(k)?inp(k+'.f','N° foto')+(nt?inp(k+'.n','Note'):''):''}</div>`;
+const ck=(k,l,nt)=>`<div class="dr${V(k)?' on':''}"><div class="dh"><b>${l}</b>${cp(k,[['1','Presente']],1)}</div>${V(k)?inp(k+'.f','N° foto')+phb(k+'.f',l,'')+(nt?inp(k+'.n','Note'):''):''}</div>`;
 const prog=d=>d.s==20?Object.values(d.v).filter(Boolean).length+' campi':CAT[d.s].r.filter(Array.isArray).filter((_,i)=>d.v['r'+i]).length+'/'+CAT[d.s].r.filter(Array.isArray).length+' righe';
 const ST={v:'visto',np:'non presente',nr:'non rilevabile',na:'non applicabile'},KV=['0,2','0,5','1'];
 const qc=s=>{s=String(s??'');return /[;"\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
@@ -162,7 +169,7 @@ function csv(rec,L){
   }else{let i=-1;CAT[d.s].r.forEach(r=>{if(!Array.isArray(r))return;i++;const s=v['r'+i];if(!s)return;
    row(r[0],r[1],r[2],ST[s],s=='v'?kv('r'+i+'.a'):'',s=='v'?kv('r'+i+'.b'):'',v['r'+i+'.p']?'PS':'',v['r'+i+'.f'],v['r'+i+'.n'])})}
   v.note&&row('NOTE','Eventuali note','','','','','','',v.note);
-  v.crit=='1'&&row('FLAG','Elemento critico (§ 3.3)','','sì');v.cond=='1'&&row('FLAG','Condizione critica in atto','','sì');
+  v.fg&&row('FOTO','Foto generali scheda','','','','','',v.fg);v.crit=='1'&&row('FLAG','Elemento critico (§ 3.3)','','sì');v.cond=='1'&&row('FLAG','Condizione critica in atto','','sì');
  }
  return '\ufeff'+o.map(r=>r.map(qc).join(';')).join('\r\n');
 }
@@ -170,14 +177,15 @@ function render(){(view=='sch'?sch:view=='dif'?dif:view=='cda'?cda:form)()}
 function dif(){
  view='dif';ctx=null;cur.d=cur.d||[];scrollTo(0,0);
  $('h').innerHTML=`<button data-a="back">‹ Elenco</button><h1>${E(cur.name)}</h1><small id="st">Salvato</small>`;
- $('m').innerHTML=`<details open><summary>Anagrafica (comune a tutte le schede)</summary><div class="in">${inp('strada','Strada di appartenenza')}${inp('km','Progressiva km')}${inp('tecnico','Tecnico rilevatore')}${inp('data','Data ispezione','date')}</div></details>${clUI()}<div class="row"><button class="p" data-a="cda">Classe di attenzione</button><button class="p" data-a="ej">Esporta ponte (JSON)</button><button data-a="ec">Esporta ponte (CSV)</button></div>`+
+ $('m').innerHTML=`<details open><summary>Anagrafica (comune a tutte le schede)</summary><div class="in">${inp('strada','Strada di appartenenza')}${inp('km','Progressiva km')}${inp('tecnico','Tecnico rilevatore')}${inp('data','Data ispezione','date')}</div></details>${clUI()}<div class="row"><button class="p" data-a="cda">Classe di attenzione</button><button class="p" data-a="ej">Esporta ponte (JSON)</button><button data-a="ec">Esporta ponte (CSV)</button><button data-a="ez">Esporta con foto (ZIP)</button></div>`+
  (cur.d.length?cur.d.map(d=>`<div class="pt"><b>${d.s} · ${NM(d.s)}${d.v.n?' · N° '+E(d.v.n):''}</b><span>${prog(d)}</span><button class="p" data-a="os" data-id="${d.id}">Apri</button><button data-a="ej" data-id="${d.id}">JSON</button><button data-a="ec" data-id="${d.id}">CSV</button><button data-a="ds" data-id="${d.id}">Elimina</button></div>`).join(''):'<p>Nessuna scheda compilata per questo ponte.</p>')+
  `<details open><summary>Aggiungi scheda</summary><div class="in">${Array.from({length:20},(_,i)=>`<button data-a="add" data-s="${i+1}">${i+1} · ${NM(i+1)}</button>`).join('')}</div></details>`;
 }
 function sch(){
  view='sch';const d=ctx;scrollTo(0,0);
  $('h').innerHTML=`<button data-a="back3">‹ Schede</button><h1>${d.s} · ${NM(d.s)}</h1><small id="st">Salvato</small>`;
- $('m').innerHTML=`<div class="in" style="padding:0 0 8px">${inp('n','N° elemento (es. pila 2)')}${d.s==20?'':`<div class="w"><label>Ai fini della classe di attenzione</label>${cp('crit',[['1','Elemento critico (§ 3.3)']],0,'ps')}${cp('cond',[['1','Condizione critica in atto']],0,'ps')}</div>`}</div>`+(d.s==20?s20():rows(d));
+ $('m').innerHTML=`<div class="in" style="padding:0 0 8px">${inp('n','N° elemento (es. pila 2)')}${d.s==20?'':`<div class="w"><label>Ai fini della classe di attenzione</label>${cp('crit',[['1','Elemento critico (§ 3.3)']],0,'ps')}${cp('cond',[['1','Condizione critica in atto']],0,'ps')}</div>`}<div class="w">${inp('fg','N° foto generali della scheda')}${phb('fg','Foto generale','')}</div></div>`+(d.s==20?s20():rows(d));
+ fillTh();
 }
 function rows(d){
  let i=-1;
@@ -185,7 +193,7 @@ function rows(d){
   if(!Array.isArray(r))return `<h3>${E(r)}</h3>`;
   i++;const [c,t,g,k1,k2,ps,l1,l2]=r,k='r'+i,s=V(k);
   let b=`<div class="dr${s?' on':''}"><div class="dh"><span><small>${c}</small><br><b>${E(t)}</b></span><span class="gb">G${g}</span></div>`+cp(k,[['v','Visto'],['np','Non presente'],['nr','Non rilevabile'],['na','Non applicabile']],1);
-  if(s=='v'){b+=ks(k+'.a',k1,l1,'Estensione K1')+ks(k+'.b',k2,l2,'Intensità K2')+(ps?cp(k+'.p',[['1','Pregiudica la statica (PS)']],0,'ps'):'')+inp(k+'.f','N° foto')}
+  if(s=='v'){b+=ks(k+'.a',k1,l1,'Estensione K1')+ks(k+'.b',k2,l2,'Intensità K2')+(ps?cp(k+'.p',[['1','Pregiudica la statica (PS)']],0,'ps'):'')+inp(k+'.f','N° foto')+phb(k+'.f',t,c)}
   return b+inp(k+'.n','Note')+'</div>';
  }).join('')+`<label>Eventuali note<textarea rows="3" data-k="note">${E(V('note'))}</textarea></label>`;
 }
@@ -299,6 +307,41 @@ function cda(){
  `<div class="tb"><table><tr><th>Passaggio</th><th>Risultato</th><th>Dettaglio</th></tr>${R.S.map(s=>`<tr><th>${E(s.n)}</th><td><b>${E(s.val)}</b></td><td>${E(s.det)}</td></tr>`).join('')}</table></div>`+
  (R.W.length?'<h3>Avvisi</h3>'+li(R.W):'')+
  `<p><small>Calcolo secondo le Linee Guida (DM 204/2022) § 4.2, Tab. 4.3-4.10 e Fig. 4.2-4.3. Il livello di difettosità usa le convenzioni indicate nei dati di classificazione: è una proposta da verificare dal tecnico.</small></p>`}
+/* ===== Foto dei difetti: archivio separato (IndexedDB 'f'), numerazione progressiva per ponte ===== */
+const FMAX=1600; // lato massimo in px delle foto salvate
+const phb=(k,d,c)=>{const a=`data-ph="${k}" data-d="${E(d)}" data-c="${E(c||'')}"`;return `<div class="ph"><button type="button" class="c" onclick="this.parentNode.children[2].click()">📷 Scatta</button><button type="button" class="c" onclick="this.parentNode.children[3].click()">Galleria</button><input type="file" accept="image/*" capture="environment" hidden ${a}><input type="file" accept="image/*" hidden ${a}></div><div class="th" data-th="${k}"></div>`};
+const listF=pid=>tx('readonly',s=>s.getAll(IDBKeyRange.bound(pid+'|',pid+'|\uffff')),'f');
+const capOf=r=>{const d=cur.d.find(x=>x.id==r.sid),s=d?d.s:r.s,el=d?d.v.n||'':r.el;return 'Scheda '+s+' · '+NM(s)+(el?' – '+el:'')+' – '+r.d};
+const shrink=(b,m,q)=>{const s=Math.min(1,m/Math.max(b.width,b.height)),c=document.createElement('canvas');c.width=Math.round(b.width*s);c.height=Math.round(b.height*s);c.getContext('2d').drawImage(b,0,0,c.width,c.height);return c};
+async function addFoto(k,d,c,file){
+ const b=await createImageBitmap(file),big=shrink(b,FMAX),bl=await new Promise(r=>big.toBlob(r,'image/jpeg',.82)),th=shrink(b,240).toDataURL('image/jpeg',.6);
+ const L=await listF(cur.id),nn=Math.max(+cur.v.fcnt||0,...L.map(r=>+r.n))+1,n=String(nn).padStart(3,'0');cur.v.fcnt=nn;
+ await tx('readwrite',s=>s.put({id:cur.id+'|'+n,n,b:bl,t:th,sid:ctx.id,s:ctx.s,el:ctx.v.n||'',k,c,d,ts:new Date().toISOString()},cur.id+'|'+n),'f');
+ const v=String(ctx.v[k]||'').trim();ctx.v[k]=v?v+', '+n:n;await put(cur);keep(render)}
+async function fillTh(){
+ const E1=[...document.querySelectorAll('[data-th]')];if(!E1.length||!cur)return;
+ const M=new Map((await listF(cur.id)).map(r=>[r.n,r]));
+ E1.forEach(el=>{el.innerHTML=(String(X().v[el.dataset.th]||'').match(/\d+/g)||[]).map(t=>M.get(t.padStart(3,'0'))).filter(Boolean).map(r=>`<img src="${r.t}" data-a="fv" data-n="${r.n}" alt="foto ${r.n}">`).join('')})}
+const crcT=(()=>{const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc32=u=>{let c=-1;for(let i=0;i<u.length;i++)c=crcT[(c^u[i])&255]^(c>>>8);return(c^-1)>>>0};
+function zipBlob(files){
+ const enc=new TextEncoder(),P=[],C=[];let off=0;
+ for(const f of files){const nm=enc.encode(f.n),c=crc32(f.d),z=f.d.length,h=new DataView(new ArrayBuffer(30)),e=new DataView(new ArrayBuffer(46));
+  h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(12,0x21,true);h.setUint32(14,c,true);h.setUint32(18,z,true);h.setUint32(22,z,true);h.setUint16(26,nm.length,true);
+  e.setUint32(0,0x02014b50,true);e.setUint16(4,20,true);e.setUint16(6,20,true);e.setUint16(8,0x0800,true);e.setUint16(14,0x21,true);e.setUint32(16,c,true);e.setUint32(20,z,true);e.setUint32(24,z,true);e.setUint16(28,nm.length,true);e.setUint32(42,off,true);
+  P.push(h.buffer,nm,f.d);C.push(e.buffer,nm);off+=30+nm.length+z}
+ const cs=C.reduce((a,x)=>a+x.byteLength,0),t=new DataView(new ArrayBuffer(22));
+ t.setUint32(0,0x06054b50,true);t.setUint16(8,files.length,true);t.setUint16(10,files.length,true);t.setUint32(12,cs,true);t.setUint32(16,off,true);
+ return new Blob([...P,...C,t.buffer],{type:'application/zip'})}
+const dlz=async(bl,n)=>{const u=URL.createObjectURL(bl),l=document.createElement('a');l.href=u;l.download=n;l.click();if(navigator.share&&navigator.canShare){const f=new File([bl],n,{type:'application/zip'});if(navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:n})}catch(e){}}}};
+async function expZip(){
+ const F=(await listF(cur.id)).sort((a,b)=>a.n-b.n);if(!F.length){alert('Nessuna foto per questo ponte');return}
+ const sf=t=>String(t||'').replace(/[^\w-]+/g,'_').slice(0,30),enc=new TextEncoder(),fl=[],o=[['n_foto','file','scheda','tipo','n_elemento','codice','descrizione','data_ora','didascalia']];
+ for(const r of F){const d=cur.d.find(x=>x.id==r.sid),s=d?d.s:r.s,el=d?d.v.n||'':r.el,fn=r.n+'_sch'+s+(el?'-'+sf(el):'')+'_'+sf(r.c||r.d)+'.jpg';
+  fl.push({n:'foto/'+fn,d:new Uint8Array(await r.b.arrayBuffer())});o.push([r.n,fn,s,NM(s),el,r.c,r.d,r.ts,capOf(r)])}
+ fl.push({n:'foto.csv',d:enc.encode('\ufeff'+o.map(r=>r.map(qc).join(';')).join('\r\n'))});
+ const L=cur.d.filter(compiled);if(L.length)fl.push({n:'difetti.csv',d:enc.encode(csv(cur,L))});
+ dlz(zipBlob(fl),'ponte_foto_'+sf(cur.name)+'.zip')}
 home();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
