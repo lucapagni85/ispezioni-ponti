@@ -89,7 +89,7 @@ function fld([t,k,l,o,c]){
 }
 async function home(){
  cur=null;view='home';ctx=null;const A=(await all()).sort((a,b)=>a.name.localeCompare(b.name,'it',{numeric:true})),ps=A.filter(p=>p.t!='l2'),p2=A.filter(p=>p.t=='l2');
- $('h').innerHTML=`<h1>Ispezioni ponti</h1><small>${ps.length} L1 · ${p2.length} L2 · V_01_00</small>`;
+ $('h').innerHTML=`<h1>Ispezioni ponti</h1><small>${ps.length} L1 · ${p2.length} L2 · V_01_01</small>`;
  $('m').innerHTML=`<h2>Livello 1 – Ispezione ponti</h2><div class="row"><button class="p" data-a="new">Nuovo ponte</button><button data-a="exp">Esporta tutto (JSON)</button><button onclick="document.getElementById('imp').click()">Importa JSON</button><input id="imp" type="file" accept=".json,.txt" hidden></div>`+
  (ps.length?ps.map(p=>`<div class="pt"><b>${E(p.name)}</b><span>${cnt(p)} campi compilati</span><button class="p" data-a="open" data-id="${p.id}">Apri</button><button data-a="del" data-id="${p.id}">Elimina</button></div>`).join(''):'<p>Nessun ponte. Tocca «Nuovo ponte» per creare la prima scheda.</p>')+
  `<h2>Livello 2 – Schede difettologiche</h2><div class="row"><button class="p" data-a="new2">Nuovo ponte (L2)</button><button data-a="exp2">Esporta tutto L2 (JSON)</button><button onclick="document.getElementById('imp2').click()">Importa JSON</button><input id="imp2" type="file" accept=".json,.txt" hidden></div>`+
@@ -126,6 +126,7 @@ document.addEventListener('click',async e=>{
  else if(a=='o2'){cur=await tx('readonly',q=>q.get(b.dataset.id));dif()}
  else if(a=='exp2'){dl((await all()).filter(p=>p.t=='l2'),'schede_difetti_'+new Date().toISOString().slice(0,10)+'.json')}
  else if(a=='ez'){await expZip()}
+ else if(a=='epdf'){await expPdf(b.dataset.id)}
  else if(a=='fv'){const r=await tx('readonly',s=>s.get(cur.id+'|'+b.dataset.n),'f');if(!r)return;const u=URL.createObjectURL(r.b),o=document.createElement('div');o.id='ov';o.dataset.u=u;o.innerHTML=`<img src="${u}"><p><b>${E(r.n)}</b> · ${E(capOf(r))}</p><div class="row"><button data-a="fx">Chiudi</button><button data-a="fd" data-n="${r.n}">Elimina foto</button></div>`;document.body.appendChild(o)}
  else if(a=='fx'){const o=$('ov');if(o){URL.revokeObjectURL(o.dataset.u);o.remove()}}
  else if(a=='fd'){const n=b.dataset.n;if(confirm('Eliminare la foto '+n+'?')){const r=await tx('readonly',s=>s.get(cur.id+'|'+n),'f');await tx('readwrite',s=>s.delete(cur.id+'|'+n),'f');const d=r&&cur.d.find(x=>x.id==r.sid);if(d&&d.v[r.k])d.v[r.k]=String(d.v[r.k]).split(/\s*[,;]\s*/).filter(t=>t&&t.padStart(3,'0')!=n).join(', ');await put(cur);const o=$('ov');if(o){URL.revokeObjectURL(o.dataset.u);o.remove()}if(view=='sch')keep(render)}}
@@ -177,8 +178,8 @@ function render(){(view=='sch'?sch:view=='dif'?dif:view=='cda'?cda:form)()}
 function dif(){
  view='dif';ctx=null;cur.d=cur.d||[];scrollTo(0,0);
  $('h').innerHTML=`<button data-a="back">‹ Elenco</button><h1>${E(cur.name)}</h1><small id="st">Salvato</small>`;
- $('m').innerHTML=`<details open><summary>Anagrafica (comune a tutte le schede)</summary><div class="in">${inp('strada','Strada di appartenenza')}${inp('km','Progressiva km')}${inp('tecnico','Tecnico rilevatore')}${inp('data','Data ispezione','date')}</div></details>${clUI()}<div class="row"><button class="p" data-a="cda">Classe di attenzione</button><button class="p" data-a="ej">Esporta ponte (JSON)</button><button data-a="ec">Esporta ponte (CSV)</button><button data-a="ez">Esporta con foto (ZIP)</button></div>`+
- (cur.d.length?cur.d.map(d=>`<div class="pt"><b>${d.s} · ${NM(d.s)}${d.v.n?' · N° '+E(d.v.n):''}</b><span>${prog(d)}</span><button class="p" data-a="os" data-id="${d.id}">Apri</button><button data-a="ej" data-id="${d.id}">JSON</button><button data-a="ec" data-id="${d.id}">CSV</button><button data-a="ds" data-id="${d.id}">Elimina</button></div>`).join(''):'<p>Nessuna scheda compilata per questo ponte.</p>')+
+ $('m').innerHTML=`<details open><summary>Anagrafica (comune a tutte le schede)</summary><div class="in">${inp('strada','Strada di appartenenza')}${inp('km','Progressiva km')}${inp('tecnico','Tecnico rilevatore')}${inp('data','Data ispezione','date')}</div></details>${clUI()}<div class="row"><button class="p" data-a="cda">Classe di attenzione</button><button class="p" data-a="ej">Esporta ponte (JSON)</button><button data-a="ec">Esporta ponte (CSV)</button><button data-a="ez">Esporta con foto (ZIP)</button><button class="p" data-a="epdf">Esporta PDF (schede + foto)</button></div>`+
+ (cur.d.length?cur.d.map(d=>`<div class="pt"><b>${d.s} · ${NM(d.s)}${d.v.n?' · N° '+E(d.v.n):''}</b><span>${prog(d)}</span><button class="p" data-a="os" data-id="${d.id}">Apri</button><button data-a="ej" data-id="${d.id}">JSON</button><button data-a="ec" data-id="${d.id}">CSV</button><button data-a="epdf" data-id="${d.id}">PDF</button><button data-a="ds" data-id="${d.id}">Elimina</button></div>`).join(''):'<p>Nessuna scheda compilata per questo ponte.</p>')+
  `<details open><summary>Aggiungi scheda</summary><div class="in">${Array.from({length:38},(_,i)=>`<button data-a="add" data-s="${i+1}">${i+1} · ${NM(i+1)}</button>`).join('')}</div></details>`;
 }
 function sch(){
@@ -342,6 +343,256 @@ async function expZip(){
  fl.push({n:'foto.csv',d:enc.encode('\ufeff'+o.map(r=>r.map(qc).join(';')).join('\r\n'))});
  const L=cur.d.filter(compiled);if(L.length)fl.push({n:'difetti.csv',d:enc.encode(csv(cur,L))});
  dlz(zipBlob(fl),'ponte_foto_'+sf(cur.name)+'.zip')}
+/*PDFX-BEGIN*/
+/* ===== Esportazione PDF delle schede (+ allegato fotografico). Generatore PDF minimale, senza librerie, funziona offline ===== */
+const PDFX=(()=>{
+const PWD=[278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556, 556, 556, 556, 556, 556, 556, 278, 278, 584, 584, 584, 556, 1015, 667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556, 833, 722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 278, 278, 278, 469, 556, 333, 556, 556, 500, 556, 556, 278, 556, 556, 222, 222, 500, 222, 833, 556, 556, 556, 556, 333, 500, 278, 556, 500, 722, 500, 500, 500, 334, 260, 334, 584, 761, 556, 556, 222, 556, 333, 1000, 556, 556, 333, 1000, 667, 333, 1000, 556, 611, 556, 556, 222, 222, 333, 333, 350, 556, 1000, 333, 1000, 500, 333, 944, 556, 500, 667, 278, 333, 556, 556, 556, 556, 260, 556, 333, 737, 370, 556, 584, 333, 737, 333, 400, 584, 333, 333, 333, 556, 537, 278, 333, 333, 365, 556, 834, 834, 834, 611, 667, 667, 667, 667, 667, 667, 1000, 722, 667, 667, 667, 667, 278, 278, 278, 278, 722, 722, 778, 778, 778, 778, 778, 584, 778, 722, 722, 722, 722, 667, 667, 611, 556, 556, 556, 556, 556, 556, 889, 500, 556, 556, 556, 556, 278, 278, 278, 278, 556, 556, 556, 556, 556, 556, 556, 584, 611, 556, 556, 556, 556, 500, 556, 500],PBD=[278, 333, 474, 556, 556, 889, 722, 238, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556, 556, 556, 556, 556, 556, 556, 333, 333, 584, 584, 584, 611, 975, 722, 722, 722, 722, 667, 611, 778, 722, 278, 556, 722, 611, 833, 722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 333, 278, 333, 584, 556, 333, 556, 611, 556, 611, 556, 333, 611, 611, 278, 278, 556, 278, 889, 611, 611, 611, 611, 389, 556, 333, 611, 556, 778, 556, 556, 500, 389, 280, 389, 584, 761, 556, 611, 278, 556, 500, 1000, 556, 556, 333, 1000, 667, 333, 1000, 611, 611, 611, 611, 278, 278, 500, 500, 350, 556, 1000, 333, 1000, 556, 333, 944, 611, 500, 667, 278, 333, 556, 556, 556, 556, 280, 556, 333, 737, 370, 556, 584, 333, 737, 333, 400, 584, 333, 333, 333, 611, 556, 278, 333, 333, 365, 556, 834, 834, 834, 611, 722, 722, 722, 722, 722, 722, 1000, 722, 667, 667, 667, 667, 278, 278, 278, 278, 722, 722, 778, 778, 778, 778, 778, 584, 778, 722, 722, 722, 722, 667, 667, 611, 556, 556, 556, 556, 556, 556, 889, 556, 556, 556, 556, 556, 278, 278, 278, 278, 611, 611, 611, 611, 611, 611, 611, 584, 611, 611, 611, 611, 611, 556, 611, 556];
+const WM={'Helvetica':PWD,'Helvetica-Oblique':PWD,'Helvetica-Bold':PBD,'Helvetica-BoldOblique':PBD};
+const FN=['Helvetica','Helvetica-Bold','Helvetica-BoldOblique','Helvetica-Oblique'];
+const W1252={0x20AC:0x80,0x201A:0x82,0x0192:0x83,0x201E:0x84,0x2026:0x85,0x2020:0x86,0x2021:0x87,0x02C6:0x88,0x2030:0x89,0x0160:0x8A,0x2039:0x8B,0x0152:0x8C,0x017D:0x8E,0x2018:0x91,0x2019:0x92,0x201C:0x93,0x201D:0x94,0x2022:0x95,0x2013:0x96,0x2014:0x97,0x02DC:0x98,0x2122:0x99,0x0161:0x9A,0x203A:0x9B,0x0153:0x9C,0x017E:0x9E,0x0178:0x9F};
+const cc=ch=>{const u=ch.charCodeAt(0);return u<128||(u>=160&&u<256)?u:(W1252[u]||63)};
+const sw=(s,f,z)=>{const t=WM[f];let w=0;for(let i=0;i<s.length;i++){const k=cc(s[i]);w+=k>=32?t[k-32]:0}return w*z/1000};
+const rgb=h=>[1,3,5].map(i=>(parseInt(h.substr(i,2),16)/255).toFixed(3)).join(' ');
+const n2=x=>String(+x.toFixed(2));
+const hex=s=>{let o='';for(let i=0;i<s.length;i++)o+=cc(s[i]).toString(16).padStart(2,'0');return o};
+function jpegInfo(u){let i=2;while(i<u.length-9){if(u[i]!==0xFF){i++;continue}const m=u[i+1];if(m===0xD8||m===0x01||m===0xFF||(m>=0xD0&&m<=0xD7)){i+=m===0xFF?1:2;continue}const L=(u[i+2]<<8)|u[i+3];if(m>=0xC0&&m<=0xCF&&m!==0xC4&&m!==0xC8&&m!==0xCC)return{h:(u[i+5]<<8)|u[i+6],w:(u[i+7]<<8)|u[i+8],n:u[i+9]};i+=2+L}throw new Error('JPEG non valido')}
+
+/* --- documento PDF --- */
+const PGW=841.8897637795277,PGH=595.2755905511812;
+function Doc(){
+ const pages=[],imgs=[];let ops=['0 g 0 G 1 w'],fnt='Helvetica',fsz=10;
+ const txt=(x,y,t)=>ops.push(`BT /F${FN.indexOf(fnt)} ${n2(fsz)} Tf ${n2(x)} ${n2(y)} Td <${hex(String(t))}> Tj ET`);
+ const c={
+  setFillColor:h=>ops.push(rgb(h)+' rg'),
+  setStrokeColor:h=>ops.push(rgb(h)+' RG'),
+  setLineWidth:w=>ops.push(n2(w)+' w'),
+  rect:(x,y,w,h,st=1,fl=0)=>ops.push(`${n2(x)} ${n2(y)} ${n2(w)} ${n2(h)} re ${fl&&st?'B':fl?'f':st?'S':'n'}`),
+  line:(a,b,x,y)=>ops.push(`${n2(a)} ${n2(b)} m ${n2(x)} ${n2(y)} l S`),
+  setFont:(f,s)=>{fnt=f;fsz=s},
+  drawString:(x,y,t)=>txt(x,y,t),
+  drawCentredString:(x,y,t)=>txt(x-sw(String(t),fnt,fsz)/2,y,t),
+  drawRightString:(x,y,t)=>txt(x-sw(String(t),fnt,fsz),y,t),
+  stringWidth:(t,f,s)=>sw(String(t),f,s),
+  drawImage:(i,x,y,w,h)=>ops.push(`q ${n2(w)} 0 0 ${n2(h)} ${n2(x)} ${n2(y)} cm /Im${i} Do Q`),
+  showPage:()=>{pages.push(ops.join('\n'));ops=['0 g 0 G 1 w']}
+ };
+ const addImage=u=>{const i=jpegInfo(u);imgs.push({u,w:i.w,h:i.h,n:i.n});return imgs.length-1};
+ const imgSize=i=>[imgs[i].w,imgs[i].h];
+ const finish=title=>{
+  if(ops.length>1)pages.push(ops.join('\n'));
+  const enc=new TextEncoder(),parts=[],offs=[];let off=0;
+  const w=x=>{const b=typeof x=='string'?enc.encode(x):x;parts.push(b);off+=b.length};
+  const obj=(id,fn)=>{offs[id]=off;w(id+' 0 obj\n');fn();w('\nendobj\n')};
+  const nI=imgs.length,P=pages.length,base=5+nI,root=base+2*P,cat=root+1,info=root+2;
+  w('%PDF-1.4\n');
+  FN.forEach((f,i)=>obj(i+1,()=>w(`<< /Type /Font /Subtype /Type1 /BaseFont /${f} /Encoding /WinAnsiEncoding >>`)));
+  imgs.forEach((im,i)=>obj(5+i,()=>{w(`<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /${im.n==1?'DeviceGray':'DeviceRGB'} /BitsPerComponent 8 /Filter /DCTDecode /Length ${im.u.length} >>\nstream\n`);w(im.u);w('\nendstream')}));
+  const res=`<< /Font << ${FN.map((f,i)=>`/F${i} ${i+1} 0 R`).join(' ')} >> /XObject << ${imgs.map((_,i)=>`/Im${i} ${5+i} 0 R`).join(' ')} >> >>`;
+  pages.forEach((p,k)=>{const cid=base+2*k,pid=cid+1,b=enc.encode(p);
+   obj(cid,()=>{w(`<< /Length ${b.length} >>\nstream\n`);w(b);w('\nendstream')});
+   obj(pid,()=>w(`<< /Type /Page /Parent ${root} 0 R /MediaBox [0 0 ${n2(PGW)} ${n2(PGH)}] /Resources ${res} /Contents ${cid} 0 R >>`))});
+  obj(root,()=>w(`<< /Type /Pages /Count ${P} /Kids [${pages.map((_,k)=>`${base+2*k+1} 0 R`).join(' ')}] >>`));
+  obj(cat,()=>w(`<< /Type /Catalog /Pages ${root} 0 R >>`));
+  obj(info,()=>w(`<< /Title (${String(title||'Schede difetti').replace(/[^\x20-\x7E]/g,'').replace(/[()\\]/g,'')}) /Producer (Ispezioni ponti) >>`));
+  const xo=off,N=info+1;
+  w(`xref\n0 ${N}\n0000000000 65535 f \n`);
+  for(let i=1;i<N;i++)w(String(offs[i]).padStart(10,'0')+' 00000 n \n');
+  w(`trailer\n<< /Size ${N} /Root ${cat} 0 R /Info ${info} 0 R >>\nstartxref\n${xo}\n%%EOF`);
+  return new Blob(parts,{type:'application/pdf'})};
+ return{c,addImage,imgSize,finish}}
+
+/* --- grafica schede (porting dello script di prova) --- */
+const W=PGW,H=PGH,M=26,ROWH=15,BK='#000000',GR='#444444',GY='#cfcfcf',YE='#fbe7ad',HD='#e6e6e6',RD='#f6d5d5',DK='#555555';
+const TITOLO='Scheda Ispezione Ponti di Livello 1';
+const COLS=[62,136,14,20,25,25,25,25,25,25,16,16,16,16,80,0];
+COLS[15]=W-2*M-COLS.reduce((a,b)=>a+b,0);
+const CX=[M];COLS.forEach(w=>CX.push(CX[CX.length-1]+w));
+const dataIt=s=>{const p=String(s||'').split('-');return p.length==3?p[2]+'/'+p[1]+'/'+p[0]:String(s||'')};
+function cross(c,x0,x1,y0,y1,bold=true){c.setStrokeColor(BK);c.setLineWidth(bold?1.3:.8);const p=4;c.line(x0+p,y0+p,x1-p,y1-p);c.line(x0+p,y1-p,x1-p,y0+p)}
+function cell(c,i,y,h,fill){if(fill){c.setFillColor(fill);c.rect(CX[i],y,CX[i+1]-CX[i],h,0,1)}c.setStrokeColor(GR);c.setLineWidth(.5);c.rect(CX[i],y,CX[i+1]-CX[i],h,1,0)}
+function tf(c,s,x,y,w,font='Helvetica',size=7.5,min=5.5){s=String(s??'');while(size>min&&c.stringWidth(s,font,size)>w-4)size-=.25;while(s.length>1&&c.stringWidth(s,font,size)>w-4)s=s.slice(0,-1);c.setFont(font,size);c.drawString(x+2,y,s)}
+
+function intestazione(c,d,ponte){
+ const v=ponte.v||{},dv=d.v||{},y=H-M;
+ c.setFillColor(BK);c.setFont('Helvetica-Bold',14);c.drawString(M,y-12,TITOLO);
+ c.setStrokeColor(BK);c.setLineWidth(1);c.rect(W-M-34,y-22,34,24);
+ c.setFont('Helvetica-Bold',16);c.drawCentredString(W-M-17,y-16,String(d.s));
+ const yy=y-54;
+ c.setFillColor(YE);c.setStrokeColor(GR);c.setLineWidth(.6);c.rect(M,yy-9,CX[16]-M,42,1,1);
+ c.setFillColor(BK);c.setFont('Helvetica-Bold',11);c.drawString(M+3,y-33,NM(d.s)+'   N° '+(dv.n||'_____'));
+ const campi=[['Ponte',ponte.name||''],['Strada di appartenenza',v.strada||''],['Progressiva km',v.km||''],['Tecnico rilevatore',v.tecnico||''],['Data ispezione',dataIt(v.data)]];
+ const xs=[M,M+110,M+270,M+360,M+470],ws=[105,155,85,105,70];
+ campi.forEach(([lab,val],i)=>{const x=xs[i],w=ws[i];
+  c.setFont('Helvetica',6.5);c.setFillColor(DK);c.drawString(x,yy+9,lab);
+  c.setFillColor(BK);tf(c,val,x-2,yy-2,w,'Helvetica',9);
+  c.setStrokeColor(GR);c.setLineWidth(.4);c.line(x,yy-5,x+w-4,yy-5)});
+ return yy-16}
+
+function testata(c,y){
+ const h=26,yb=y-h;for(let i=0;i<16;i++)cell(c,i,yb,h,HD);
+ c.setFillColor(BK);
+ const ctr=(i,s,yy,size=7)=>{c.setFont('Helvetica-Bold',size);c.drawCentredString((CX[i]+CX[i+1])/2,yy,s)};
+ ctr(0,'Codice difetto',yb+10);ctr(1,'Descrizione difetto',yb+10);ctr(2,'G',yb+10);ctr(3,'visto',yb+10,6.5);
+ [[4,7,'Estensione K1'],[7,10,'Intensità K2']].forEach(([a,b,t])=>{
+  c.setFillColor(HD);c.rect(CX[a],yb+13,CX[b]-CX[a],13,0,1);c.setStrokeColor(GR);c.rect(CX[a],yb+13,CX[b]-CX[a],13,1,0);
+  c.setFillColor(BK);c.setFont('Helvetica-Bold',7);c.drawCentredString((CX[a]+CX[b])/2,yb+16.5,t);
+  for(let j=0;j<3;j++){c.setFont('Helvetica-Bold',7);c.drawCentredString((CX[a+j]+CX[a+j+1])/2,yb+4,KV[j])}});
+ ['PS','NA','NR','NP','N° foto'].forEach((s,k)=>ctr(10+k,s,yb+10,k<4?6.5:6));
+ ctr(15,'Note',yb+10);return yb}
+
+function riga(c,y,r,v,k){
+ const [cod,desc,g,m1,m2,ps,l1,l2]=r,h=ROWH,yb=y-h,st=v[k],fill=g==5?RD:null;
+ for(let i=0;i<16;i++)cell(c,i,yb,h,fill);
+ c.setFillColor(BK);
+ tf(c,cod,CX[0],yb+5.5,CX[1]-CX[0],'Helvetica',6.5);
+ tf(c,desc,CX[1],yb+5.5,CX[2]-CX[1],g==5?'Helvetica-Bold':'Helvetica',7.5);
+ c.setFont('Helvetica-Bold',8);c.drawCentredString((CX[2]+CX[3])/2,yb+5.5,String(g));
+ [[4,m1,l1],[7,m2,l2]].forEach(([base,mask,lab])=>{for(let j=0;j<3;j++){const i=base+j;
+  if(mask[j]!='1')cell(c,i,yb,h,GY);
+  else if(lab){c.setFillColor(DK);c.setFont('Helvetica',5.5);c.drawCentredString((CX[i]+CX[i+1])/2,yb+10.5,lab[j]);c.setFillColor(BK)}}});
+ if(!ps)cell(c,10,yb,h,GY);
+ if(st=='v'){cross(c,CX[3],CX[4],yb,y);
+  [[4,k+'.a'],[7,k+'.b']].forEach(([base,key])=>{const val=v[key];if(val!=null&&val!==''){const j=+val;cross(c,CX[base+j],CX[base+j+1],yb,y)}});
+  if(v[k+'.p']=='1')cross(c,CX[10],CX[11],yb,y)}
+ [['na',11],['nr',12],['np',13]].forEach(([s,i])=>{if(st==s)cross(c,CX[i],CX[i+1],yb,y)});
+ c.setFillColor(BK);
+ if(v[k+'.f'])tf(c,v[k+'.f'],CX[14],yb+5.5,CX[15]-CX[14],'Helvetica',7);
+ if(v[k+'.n'])tf(c,v[k+'.n'],CX[15],yb+5.5,CX[16]-CX[15],'Helvetica',7);
+ return yb}
+
+function sottotitolo(c,y,t){const h=13,yb=y-h;c.setFillColor(HD);c.rect(CX[0],yb,CX[16]-CX[0],h,0,1);c.setStrokeColor(GR);c.setLineWidth(.5);c.rect(CX[0],yb,CX[16]-CX[0],h,1,0);c.setFillColor(BK);c.setFont('Helvetica-BoldOblique',7.5);c.drawString(CX[0]+3,yb+3.5,t);return yb}
+
+function piede(c,d,y){
+ const dv=d.v||{},fl=[];
+ if(dv.crit=='1')fl.push('ELEMENTO CRITICO (§ 3.3 Linee Guida)');
+ if(dv.cond=='1')fl.push('CONDIZIONE CRITICA IN ATTO');
+ const hn=46,need=hn+62;if(y-need<M)return false;
+ c.setFillColor(BK);c.setFont('Helvetica-Bold',8);c.drawString(M,y-12,'Eventuali note');
+ c.setStrokeColor(BK);c.setLineWidth(1);c.rect(M,y-12-hn+4,CX[16]-M,hn-4);
+ c.setFont('Helvetica',8);let ty=y-24;
+ fl.concat(dv.note?[dv.note]:[]).forEach(t=>String(t).split('\n').forEach(ln=>{c.drawString(M+4,ty,ln.slice(0,140));ty-=10}));
+ if(dv.fg)c.drawString(M+4,ty,'Foto generali: '+dv.fg);
+ let yl=y-12-hn-4;c.setFont('Helvetica',6.8);
+ ["PS  spuntare se si ritiene che la presenza del difetto possa compromettere la statica dell'opera. Associato ai soli difetti di gravità 4 e 5.",
+  'NA  spuntare se il difetto non è applicabile alla tipologia di manufatto in esame.',
+  'NR  spuntare se il difetto non si può rilevare mediante ispezione visiva (es. vegetazione invasiva, zone non accessibili).',
+  'NP  spuntare se il difetto non è stato rilevato.',
+  'N° foto: numerazione digitale delle foto relative allo specifico difetto (catalogate, numerate e con didascalia).'].forEach(t=>{c.drawString(M,yl,t);yl-=9});
+ return true}
+
+function scheda(c,ponte,d){
+ const cd=CAT[d.s],v=d.v||{};
+ let y=testata(c,intestazione(c,d,ponte)),i=-1;
+ cd.r.forEach(r=>{
+  if(!Array.isArray(r)){if(y-13<M+20){c.showPage();y=testata(c,intestazione(c,d,ponte))}y=sottotitolo(c,y,r);return}
+  i++;if(y-ROWH<M+20){c.showPage();y=testata(c,intestazione(c,d,ponte))}
+  y=riga(c,y,r,v,'r'+i)});
+ if(!piede(c,d,y-4)){c.showPage();piede(c,d,H-M)}
+ c.showPage()}
+
+/* --- scheda 20: elementi accessori --- */
+const BL2=[BL[0],['pg','Presente come guardiavia'],['pp','Presente come parapetto'],...BL.slice(1)];
+function tabella(c,xs,y,h,fn,n){for(let i=0;i<n;i++){const yb=y-h;for(let a=0;a<xs.length-1;a++){c.setStrokeColor(GR);c.setLineWidth(.5);c.rect(xs[a],yb,xs[a+1]-xs[a],h,1,0)}fn(i,yb);y=yb}return y}
+function boxVal(c,x,y,w,h,lab,val){c.setStrokeColor(GR);c.setLineWidth(.5);c.rect(x,y-h,w,h,1,0);c.setFont('Helvetica',6.5);c.setFillColor(DK);c.drawString(x+3,y-8,lab);c.setFillColor(BK);tf(c,val,x,y-h+4,w,'Helvetica',9)}
+function chk(c,x,y,on,lab,size=8){c.setStrokeColor(GR);c.setLineWidth(.6);c.rect(x,y,9,9,1,0);if(on)cross(c,x-1.5,x+10.5,y-1.5,y+10.5);c.setFillColor(BK);c.setFont('Helvetica',size);c.drawString(x+13,y+1.5,lab)}
+function scheda20(c,ponte,d){
+ const v=d.v||{};let y=intestazione(c,d,ponte);const h=24;let gx=M;
+ [['N° corsie','ncorsie',70],['Larghezza carreggiata [m]','lcarr',120],['Larghezza marciapiede [m]','lmarc',120],['Altezza marciapiede [m]','hmarc',115]].forEach(([lab,k,w])=>{boxVal(c,gx,y,w,h,lab,v[k]||'');gx+=w});
+ c.setStrokeColor(GR);c.setLineWidth(.5);c.rect(gx,y-h,CX[16]-gx,h,1,0);
+ c.setFont('Helvetica',6.5);c.setFillColor(DK);c.drawString(gx+3,y-8,'Marciapiede / Barriere laterali');c.setFillColor(BK);
+ let cx=gx+4;
+ [['0','NO'],['1','SI – 1 lato'],['2','SI – 2 lati']].forEach(([val,lab])=>{chk(c,cx,y-h+4,v.marc===val,lab,7.5);cx+=18+c.stringWidth(lab,'Helvetica',7.5)+8});
+ cx+=10;
+ ['1','2','3'].forEach(val=>{chk(c,cx,y-h+4,v.caso===val,'Caso '+val,7.5);cx+=18+c.stringWidth('Caso '+val,'Helvetica',7.5)+8});
+ y-=h+8;
+ const LW=540,xs=[M,M+50,M+160,M+290,M+322,M+380,M+LW],rh=15,hy=y;
+ c.setFillColor(HD);c.rect(M,y-18,LW,18,0,1);c.setFillColor(BK);
+ for(let a=0;a<6;a++){c.setStrokeColor(GR);c.setLineWidth(.5);c.rect(xs[a],y-18,xs[a+1]-xs[a],18,1,0)}
+ c.setFont('Helvetica-Bold',7);
+ ['Codice','Elemento ispezionato','Descrizione difetto','Presente','N° foto','Note'].forEach((t,a)=>c.drawCentredString((xs[a]+xs[a+1])/2,y-12,t));
+ y-=18;
+ const yl=tabella(c,xs,y,rh,(i,yb)=>{
+  const [n,g,t]=EL[i],k='e'+i;c.setFillColor(BK);
+  tf(c,'El.Acc_'+n,xs[0],yb+4.5,xs[1]-xs[0],'Helvetica',6.5);
+  tf(c,g,xs[1],yb+4.5,xs[2]-xs[1],'Helvetica-Bold',7);
+  tf(c,t,xs[2],yb+4.5,xs[3]-xs[2],'Helvetica',7.5);
+  if(v[k])cross(c,xs[3],xs[4],yb,yb+rh);
+  tf(c,v[k+'.f']||'',xs[4],yb+4.5,xs[5]-xs[4],'Helvetica',7);
+  tf(c,v[k+'.n']||'',xs[5],yb+4.5,xs[6]-xs[5],'Helvetica',7)},EL.length);
+ const RX=M+LW+12,RW=CX[16]-RX;
+ const xr=[RX,RX+RW*.46,RX+RW*.46+22,RX+RW*.73,RX+RW*.73+22,RX+RW].map(a=>Math.round(a*10)/10);
+ let y2=hy;
+ c.setFillColor(HD);c.rect(RX,y2-30,RW,30,0,1);c.setFillColor(BK);c.setStrokeColor(GR);c.setLineWidth(.5);c.rect(RX,y2-30,RW,30,1,0);
+ c.setFont('Helvetica-Bold',7);
+ c.drawCentredString((xr[1]+xr[3])/2,y2-10,'GUARDIAVIA');c.drawCentredString((xr[3]+xr[5])/2,y2-10,'PARAPETTO');c.drawCentredString((xr[0]+xr[1])/2,y2-20,'Barriere laterali');
+ c.setFont('Helvetica-Bold',6);
+ ['Pres.','N° foto','Pres.','N° foto'].forEach((t,a)=>c.drawCentredString((xr[a+1]+xr[a+2])/2,y2-25,t));
+ y2-=30;const caso=v.caso,gr=(x0,x1,yb)=>{c.setFillColor(GY);c.rect(x0,yb,x1-x0,rh,0,1);c.setStrokeColor(GR);c.setLineWidth(.5);c.rect(x0,yb,x1-x0,rh,1,0)};
+ tabella(c,xr,y2,rh,(i,yb)=>{
+  if(i<BL2.length){const [k,lab]=BL2[i],pp=k=='pg'||k=='pp';
+   c.setFillColor(BK);tf(c,lab,xr[0],yb+4.5,xr[1]-xr[0],'Helvetica',7.5);
+   [['g.',1],['p.',3]].forEach(([pre,a])=>{
+    const grigio=(pre=='p.'&&(caso=='1'||pp))||(pre=='g.'&&pp&&caso!='3');
+    if(grigio){gr(xr[a],xr[a+1],yb);gr(xr[a+1],xr[a+2],yb);return}
+    if(v[pre+k])cross(c,xr[a],xr[a+1],yb,yb+rh);
+    c.setFillColor(BK);tf(c,v[pre+k+'.f']||'',xr[a+1],yb+4.5,xr[a+2]-xr[a+1],'Helvetica',6.5)})
+  }else{
+   c.setFillColor(BK);tf(c,'Altezza (cm)',xr[0],yb+4.5,xr[1]-xr[0],'Helvetica-Bold',7.5);
+   [['g.',1],['p.',3]].forEach(([pre,a])=>{
+    if(pre=='p.'&&caso=='1')gr(xr[a],xr[a+2],yb);
+    else{c.setFillColor(BK);tf(c,v[pre+'h']||'',xr[a],yb+4.5,xr[a+2]-xr[a],'Helvetica',8)}})}
+ },BL2.length+1);
+ const yb=Math.min(yl,y2-rh*(BL2.length+1))-14;
+ c.setFillColor(BK);c.setFont('Helvetica',8);if(v.fg)c.drawString(M,yb,'Foto generali: '+v.fg);
+ c.showPage()}
+
+/* --- allegato fotografico: 4 foto per pagina (2x2) --- */
+const numeriFoto=d=>{const o=new Set();Object.entries(d.v||{}).forEach(([k,val])=>{if(k=='fg'||k.endsWith('.f'))(String(val||'').match(/\d+/g)||[]).forEach(t=>o.add(t.padStart(3,'0')))});return[...o].sort((a,b)=>a-b)};
+function allegato(c,doc,ponte,d,foto,cache){
+ const nums=numeriFoto(d);if(!nums.length)return 0;
+ const tit='Allegato fotografico – Scheda '+d.s+' · '+NM(d.s)+(d.v&&d.v.n?'  N° '+d.v.n:'');
+ const gap=10,top=H-M-30,cw=(W-2*M-gap)/2,ch=(top-M-gap)/2,np=Math.ceil(nums.length/4);
+ for(let p=0;p<np;p++){
+  c.setFillColor(YE);c.setStrokeColor(GR);c.setLineWidth(.6);c.rect(M,H-M-24,W-2*M,24,1,1);
+  c.setFillColor(BK);c.setFont('Helvetica-Bold',11);c.drawString(M+4,H-M-16,tit);
+  c.setFont('Helvetica',8);c.drawRightString(W-M-4,H-M-16,'Ponte '+(ponte.name||'')+' · pag. foto '+(p+1)+'/'+np);
+  nums.slice(p*4,p*4+4).forEach((n,j)=>{
+   const x0=M+(j%2)*(cw+gap),yb=top-Math.floor(j/2)*(ch+gap)-ch,r=foto[n],capH=16;
+   c.setStrokeColor(GR);c.setLineWidth(.6);c.rect(x0,yb,cw,ch,1,0);
+   c.setFillColor(BK);tf(c,((r&&r.d)||'Foto')+'_'+n,x0+2,yb+5,cw-4,'Helvetica-Bold',9,6);
+   c.setStrokeColor(GR);c.line(x0,yb+capH,x0+cw,yb+capH);
+   const ax=x0+4,ay=yb+capH+4,aw=cw-8,ah=ch-capH-8;
+   try{
+    if(!r)throw 0;
+    if(!(n in cache))cache[n]=doc.addImage(r.u8);
+    const [iw,ih]=doc.imgSize(cache[n]),sc=Math.min(aw/iw,ah/ih),w=iw*sc,h=ih*sc;
+    c.drawImage(cache[n],ax+(aw-w)/2,ay+(ah-h)/2,w,h)
+   }catch(e){c.setFont('Helvetica-Oblique',9);c.setFillColor('#aa0000');c.drawCentredString(x0+cw/2,yb+ch/2,'Foto '+n+' non disponibile')}});
+  c.showPage()}
+ return nums.length}
+
+/* --- ingresso: schede già filtrate; loadFoto(n) -> {d,u8}|null --- */
+async function build(ponte,schede,loadFoto){
+ const doc=Doc(),c=doc.c,foto={},cache={};
+ const L=schede.slice().sort((a,b)=>a.s-b.s||String((a.v||{}).n||'').localeCompare(String((b.v||{}).n||''),'it',{numeric:true}));
+ for(const d of L)for(const n of numeriFoto(d))if(!(n in foto))foto[n]=await loadFoto(n);
+ for(const d of L){if(d.s==20)scheda20(c,ponte,d);else if(CAT[d.s])scheda(c,ponte,d);else continue;allegato(c,doc,ponte,d,foto,cache)}
+ return doc.finish('Schede difetti - '+(ponte.name||''))}
+return{build}})();
+/*PDFX-END*/
+
+const dlb=async(bl,n,ty)=>{const u=URL.createObjectURL(bl),l=document.createElement('a');l.href=u;l.download=n;l.click();if(navigator.share&&navigator.canShare){const f=new File([bl],n,{type:ty});if(navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:n})}catch(e){}}}};
+async function expPdf(id){
+ const L=id?cur.d.filter(x=>x.id==id):cur.d.filter(compiled);
+ if(!L.length){alert('Nessuna scheda compilata da esportare');return}
+ const st=$('st');if(st)st.textContent='Creo il PDF…';
+ try{
+  await put(cur);
+  const F=new Map((await listF(cur.id)).map(r=>[r.n,r])),sf=t=>String(t||'').replace(/[^\w-]+/g,'_');
+  const bl=await PDFX.build({name:cur.name,v:cur.v},L,async n=>{const r=F.get(n);return r?{d:r.d,u8:new Uint8Array(await r.b.arrayBuffer())}:null});
+  await dlb(bl,'schede_'+sf(cur.name)+(id?'_sch'+L[0].s+(L[0].v.n?'-'+sf(L[0].v.n):''):'')+'.pdf','application/pdf')
+ }catch(e){alert('PDF non creato: '+e.message)}
+ if(st)st.textContent='Salvato'}
 home();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
